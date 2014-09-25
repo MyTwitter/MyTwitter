@@ -164,7 +164,7 @@ function Send-Tweet {
 	[CmdletBinding()]
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
-		[Parameter(Mandatory)]
+		[Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
 		[ValidateLength(1, 140)]
 		[string]$Message
 	)
@@ -198,7 +198,7 @@ function Send-TwitterDm {
 	[CmdletBinding()]
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
-		[Parameter(Mandatory)]
+		[Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
 		[ValidateLength(1, 140)]
 		[string]$Message,
 		[Parameter(Mandatory)]
