@@ -60,15 +60,7 @@ function Get-OAuthAuthorization {
 		[Parameter(Mandatory, ParameterSetName = 'DM')]
 		[string]$DmMessage,
 		[Parameter(Mandatory, ParameterSetName = 'DM')]
-		[string]$Username,
-		[Parameter()]
-		[string]$ApiKey = '',
-		[Parameter()]
-		[string]$ApiSecret = '',
-		[Parameter()]
-		[string]$AccessToken = '',
-		[Parameter()]
-		[string]$AccessTokenSecret = ''
+		[string]$Username
 	)
 	
 	begin {
@@ -80,6 +72,21 @@ function Get-OAuthAuthorization {
 		} catch {
 			Write-Error $_.Exception.Message
 		}
+
+    if(!(Test-Path -Path HKCU:\Software\MyTwitter))
+    {
+      #Call Set-OAuthorization function
+      Set-OAuthAuthorization
+    }
+    else
+    {
+        Write-Verbose "Retrieving Twitter Application settings from registry HKCU:\Software\MyTwitter"
+        $global:APIKey = (Get-Item HKCU:\Software\MyTwitter).getvalue("APIKey")
+        $global:APISecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("APISecret")
+        $global:AccessToken = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessToken")
+        $globalAccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
+
+    }
 	}
 	
 	process {
@@ -148,6 +155,92 @@ function Get-OAuthAuthorization {
 			Write-Error $_.Exception.Message
 		}
 	}
+}
+
+########################################################################################################################
+# Set-OAuthAuthorization
+# For the Twitter Authentication you need to use your own Client Application Consumer key and Consumer Secret
+# Request your Twitter API Key at https://apps.twitter.com/
+# We need the following info from the Twitter application you created
+# API key, the API secret, an Access token and an Access token secret
+# Date: 25/9/2014
+# Author; Stefan Stranger
+# Version: 0.1
+# Changes: 
+# ToDo: Check spaces at begin of Twitter API settings. Sometimes a space is being copied from webpage.
+########################################################################################################################
+Function Set-OAuthAuthorization
+{
+  <#
+	.SYNOPSIS
+		This Function stores the Twitter API Application settings in the registry.
+	.EXAMPLE
+		Set-OAuthAuthorization
+	
+		This example will check if the Twitter API Application settings are already stored in the registry.
+    If not it opens the Twitter API application website to retrieve the Twitter API Settings.
+	#>
+ 
+    [CmdletBinding(SupportsShouldProcess=$true)]
+      param
+      (
+        [Parameter(
+          HelpMessage='What is the Twitter Client API Key?')]
+        [string]$APIKey,
+        [Parameter(
+          HelpMessage='What is the Twitter Client API Secret?')]
+        [string]$APISecret,
+        [Parameter(
+          HelpMessage='What is the Twitter Client Access Token?')]
+        [string]$AccessToken,
+        [Parameter(
+          HelpMessage='What is the Twitter Client Access Token Secret?')]
+        [string]$AccessTokenSecret,
+        [switch] $Force
+      )
+
+    Write-Verbose "Function Set-OAuthAuthorization started"
+
+    
+    #API key, the API secret, an Access token and an Access token secret are provided by Twitter application/
+    Write-Verbose "Check Registry if the Twitter Application keys are already stored"
+    if(!(Test-Path -Path HKCU:\Software\MyTwitter) -or $force)
+    {
+        Write-Output "You first need to register a Twitter Application and store the API key, the API secret, an Access token and an Access token secret on your machine `n `nGo to https://apps.twitter.com"
+        start "https://apps.twitter.com/"
+        $APIKey = Read-Host "Enter Twitter API Key"
+        $APISecret = Read-Host "Enter Twitter API Secret"
+        $AccessToken = Read-Host "Enter Twitter Access Token"
+        $AccessTokenSecret = Read-Host "Enter Twitter Access Token Secret"
+        Write-Verbose "Storing Consumer and Consumer Secret keys in Registry HKCU:\Software\MyTwitter"
+        #Store Application API settings in Registry
+
+        if($APIKey -and $APISecret -and $AccessToken -and $AccessTokenSecret )
+        {
+            New-Item -Path hkcu:\software -Name MyTwitter | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "APIKey" -value "$APIKey" | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "APISecret" -value "$APISecret" | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "AccessToken" -value "$AccessToken" | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "AccessTokenSecret" -value "$AccessTokenSecret" | out-null
+        }
+        else 
+        {
+          write-error "Please restart Set-OAuthAuthorization Function. One of the requested properties is empty"
+        }
+    }
+    else
+    {
+        Write-Verbose "Retrieving Twitter Application settings from registry HKCU:\Software\MyTwitter"
+        $APIKey = (Get-Item HKCU:\Software\MyTwitter).getvalue("APIKey")
+        $APISecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("APISecret")
+        $AccessToken = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessToken")
+        $AccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
+    }
+
+    Write-Output "Finished Storing\Retrieving Twitter Application Authentication"
+    Write-Verbose "Function Set-OAuthAuthorization finished"
+
+
 }
 
 function Send-Tweet {
