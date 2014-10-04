@@ -84,7 +84,7 @@ function Get-OAuthAuthorization {
         $global:APIKey = (Get-Item HKCU:\Software\MyTwitter).getvalue("APIKey")
         $global:APISecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("APISecret")
         $global:AccessToken = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessToken")
-        $globalAccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
+        $global:AccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
 
     }
 	}
@@ -243,6 +243,31 @@ Function Set-OAuthAuthorization
 
 }
 
+function Escape-SpecialCharacters
+{
+	[CmdletBinding()]
+	[OutputType([System.String])]
+	param (
+		[Parameter(Mandatory)]
+		[ValidateLength(1, 140)]
+		[string] $Message
+	)
+	try
+	{
+		[string[]] $specialChar = @("!", "*", "'", "(", ")")
+		for ($i = 0; $i -lt $specialChar.Length; $i++)
+		{
+			$Message = $Message.Replace($specialChar[$i], [System.Uri]::HexEscape($specialChar[$i]))
+		}
+		return $Message
+	}
+	catch
+	{
+		Write-Error $_.Exception.Message
+	}
+}
+
+
 function Send-Tweet {
 	<#
 	.SYNOPSIS
@@ -265,10 +290,13 @@ function Send-Tweet {
 	process {
 		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/update.json'
 		
+		####Added following line/function to properly escape !,*,(,) special characters
+		$Message = $(Escape-SpecialCharacters -Message $Message)
+		####
+		
 		$AuthorizationString = Get-OAuthAuthorization -TweetMessage $Message -HttpEndPoint $HttpEndPoint
 		
-		## Convert the message to a Byte array
-		$Body = [System.Text.Encoding]::ASCII.GetBytes("status=$Message");
+		$Body = "status=$Message"
 		Write-Verbose "Using POST body '$Body'"
 		Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
 	}
@@ -317,3 +345,4 @@ function Send-TwitterDm {
 
 Export-ModuleMember Send-Tweet
 Export-ModuleMember Send-TwitterDm
+Export-ModuleMember Set-OAuthAuthorization
