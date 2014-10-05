@@ -343,6 +343,117 @@ function Send-TwitterDm {
 	}
 }
 
+########################################################################################################################
+# Split-Tweet
+# Function for the PowerShell MyTwitter module
+# Twitter has a max tweet message length of 140 characters and you may sometimes want to split a message into smaller
+# seperate tweets to comply to 140 character limit.
+# Date: 05/10/2014
+# Author; Stefan Stranger
+# Version: 0.1
+# Changes: 
+# ToDo: Only split on complete words.
+#       Make pipeline aware
+#       Return a string object with more properties, like length etc.
+########################################################################################################################
+Function Split-Tweet {
+  <#
+  .SYNOPSIS
+   This Function splits a Twitter message that exceed the maximum length of 140 characters.
+  .DESCRIPTION
+   This Function splits a Twitter message that exceed the maximum length of 140 characters.
+  .EXAMPLE
+   $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
+   Split-Tweet -Message $Message
+   This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope yo like my new split-tweet  
+   function.
+  .EXAMPLE
+   $message = 1..100 -join ""
+   Split-Tweet -Message $Message -Length 10 -Postfix '>...'
+   123456 >...
+   789101 >...
+   112131 >...
+   415161 >...
+   Splits a message into seperate messages with a length of 10 characters with a Postfix.
+  .EXAMPLE
+   $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
+   Split-Tweet -Message $Message -Postfix ">..." | Select-Object @{L="Message";E={$_}} | % {Send-Tweet -Message $_.Message}
+   Splits a message into seperate messages and pipes the result to the Send-Tweet Function.
+  #>
+
+  [CmdletBinding()]
+    [Alias()]
+    [OutputType([string])]
+    Param
+    (
+        # Message you want to split
+        [Parameter(
+                   HelpMessage = 'What is the message you want to split?',
+                   Mandatory = $true,
+                   ValueFromPipelineByPropertyName = $false,
+                   Position = 0)]
+        [string]$Message,
+        [Parameter(
+                   HelpMessage = 'What is length of the message?',
+                   Mandatory = $false,
+                   ValueFromPipelineByPropertyName = $false)]
+        [int]$Length = 139, 
+        [Parameter(
+                   HelpMessage = 'What is the postfix for the Twitter message?',
+                   Mandatory = $false,
+                   ValueFromPipelineByPropertyName = $false)]
+        [string]$Postfix
+    )
+
+
+  #Check length of Tweet
+  if ($Message.length -gt $Length)
+  {
+    Write-Verbose 'Message needs to be splitted'
+    #Total length of message
+    Write-Verbose "Length of message is $($message.length)"
+    #Calculate number message
+    Write-Verbose "Split message in $(($message.Length)/$Length) times"
+    #Create an array
+    $numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
+    Write-Verbose "`$numberofmsgs: $numberofmsgs"
+    $myarray = 1..$numberofmsgs
+    $start = 0
+    $counter = 0 
+    $result = @()
+    #Check if Postfix param is being used and if so count number of characters
+    if ($Postfix)
+    {
+        Write-Verbose "`$Postfix length: $($Postfix.Length)"
+        $Length = $Length - $($Postfix.Length)
+        $numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
+    }
+    $myarray | ForEach-Object  -Process {
+      Write-Verbose "`$start: $start"
+      $counter += 1
+      Write-Verbose "`$counter: $counter"
+      if ($counter -lt $numberofmsgs)
+      {
+        $result += $Message.substring($start,$Length) + " $Postfix"
+        $start = $start + $Length
+      }
+      else
+      {
+        if ($start -ne $Message.Length-1)
+            {
+          $result += $Message.substring($start,($Message.Length - $start))
+        }
+      }
+    }
+  }
+  else
+  {
+    Write-Verbose 'No need to split tweet'
+  }
+  return $result
+}
+
 Export-ModuleMember Send-Tweet
 Export-ModuleMember Send-TwitterDm
+Export-ModuleMember Split-Tweet
 Export-ModuleMember Set-OAuthAuthorization
