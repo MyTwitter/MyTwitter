@@ -60,15 +60,7 @@ function Get-OAuthAuthorization {
 		[Parameter(Mandatory, ParameterSetName = 'DM')]
 		[string]$DmMessage,
 		[Parameter(Mandatory, ParameterSetName = 'DM')]
-		[string]$Username,
-		[Parameter()]
-		[string]$ApiKey = '',
-		[Parameter()]
-		[string]$ApiSecret = '',
-		[Parameter()]
-		[string]$AccessToken = '',
-		[Parameter()]
-		[string]$AccessTokenSecret = ''
+		[string]$Username
 	)
 	
 	begin {
@@ -80,6 +72,21 @@ function Get-OAuthAuthorization {
 		} catch {
 			Write-Error $_.Exception.Message
 		}
+
+    if(!(Test-Path -Path HKCU:\Software\MyTwitter))
+    {
+      #Call Set-OAuthorization function
+      Set-OAuthAuthorization
+    }
+    else
+    {
+        Write-Verbose "Retrieving Twitter Application settings from registry HKCU:\Software\MyTwitter"
+        $global:APIKey = (Get-Item HKCU:\Software\MyTwitter).getvalue("APIKey")
+        $global:APISecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("APISecret")
+        $global:AccessToken = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessToken")
+        $global:AccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
+
+    }
 	}
 	
 	process {
@@ -150,6 +157,117 @@ function Get-OAuthAuthorization {
 	}
 }
 
+########################################################################################################################
+# Set-OAuthAuthorization
+# For the Twitter Authentication you need to use your own Client Application Consumer key and Consumer Secret
+# Request your Twitter API Key at https://apps.twitter.com/
+# We need the following info from the Twitter application you created
+# API key, the API secret, an Access token and an Access token secret
+# Date: 25/9/2014
+# Author; Stefan Stranger
+# Version: 0.1
+# Changes: 
+# ToDo: Check spaces at begin of Twitter API settings. Sometimes a space is being copied from webpage.
+########################################################################################################################
+Function Set-OAuthAuthorization
+{
+  <#
+	.SYNOPSIS
+		This Function stores the Twitter API Application settings in the registry.
+	.EXAMPLE
+		Set-OAuthAuthorization
+	
+		This example will check if the Twitter API Application settings are already stored in the registry.
+    If not it opens the Twitter API application website to retrieve the Twitter API Settings.
+	#>
+ 
+    [CmdletBinding(SupportsShouldProcess=$true)]
+      param
+      (
+        [Parameter(
+          HelpMessage='What is the Twitter Client API Key?')]
+        [string]$APIKey,
+        [Parameter(
+          HelpMessage='What is the Twitter Client API Secret?')]
+        [string]$APISecret,
+        [Parameter(
+          HelpMessage='What is the Twitter Client Access Token?')]
+        [string]$AccessToken,
+        [Parameter(
+          HelpMessage='What is the Twitter Client Access Token Secret?')]
+        [string]$AccessTokenSecret,
+        [switch] $Force
+      )
+
+    Write-Verbose "Function Set-OAuthAuthorization started"
+
+    
+    #API key, the API secret, an Access token and an Access token secret are provided by Twitter application/
+    Write-Verbose "Check Registry if the Twitter Application keys are already stored"
+    if(!(Test-Path -Path HKCU:\Software\MyTwitter) -or $force)
+    {
+        Write-Output "You first need to register a Twitter Application and store the API key, the API secret, an Access token and an Access token secret on your machine `n `nGo to https://apps.twitter.com"
+        start "https://apps.twitter.com/"
+        $APIKey = Read-Host "Enter Twitter API Key"
+        $APISecret = Read-Host "Enter Twitter API Secret"
+        $AccessToken = Read-Host "Enter Twitter Access Token"
+        $AccessTokenSecret = Read-Host "Enter Twitter Access Token Secret"
+        Write-Verbose "Storing Consumer and Consumer Secret keys in Registry HKCU:\Software\MyTwitter"
+        #Store Application API settings in Registry
+
+        if($APIKey -and $APISecret -and $AccessToken -and $AccessTokenSecret )
+        {
+            New-Item -Path hkcu:\software -Name MyTwitter | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "APIKey" -value "$APIKey" | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "APISecret" -value "$APISecret" | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "AccessToken" -value "$AccessToken" | out-null
+            New-ItemProperty HKCU:\Software\MyTwitter -name "AccessTokenSecret" -value "$AccessTokenSecret" | out-null
+        }
+        else 
+        {
+          write-error "Please restart Set-OAuthAuthorization Function. One of the requested properties is empty"
+        }
+    }
+    else
+    {
+        Write-Verbose "Retrieving Twitter Application settings from registry HKCU:\Software\MyTwitter"
+        $APIKey = (Get-Item HKCU:\Software\MyTwitter).getvalue("APIKey")
+        $APISecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("APISecret")
+        $AccessToken = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessToken")
+        $AccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
+    }
+
+    Write-Output "Finished Storing\Retrieving Twitter Application Authentication"
+    Write-Verbose "Function Set-OAuthAuthorization finished"
+
+
+}
+
+function Escape-SpecialCharacters
+{
+	[CmdletBinding()]
+	[OutputType([System.String])]
+	param (
+		[Parameter(Mandatory)]
+		[ValidateLength(1, 140)]
+		[string] $Message
+	)
+	try
+	{
+		[string[]] $specialChar = @("!", "*", "'", "(", ")")
+		for ($i = 0; $i -lt $specialChar.Length; $i++)
+		{
+			$Message = $Message.Replace($specialChar[$i], [System.Uri]::HexEscape($specialChar[$i]))
+		}
+		return $Message
+	}
+	catch
+	{
+		Write-Error $_.Exception.Message
+	}
+}
+
+
 function Send-Tweet {
 	<#
 	.SYNOPSIS
@@ -172,10 +290,13 @@ function Send-Tweet {
 	process {
 		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/update.json'
 		
+		####Added following line/function to properly escape !,*,(,) special characters
+		$Message = $(Escape-SpecialCharacters -Message $Message)
+		####
+		
 		$AuthorizationString = Get-OAuthAuthorization -TweetMessage $Message -HttpEndPoint $HttpEndPoint
 		
-		## Convert the message to a Byte array
-		$Body = [System.Text.Encoding]::ASCII.GetBytes("status=$Message");
+		$Body = "status=$Message"
 		Write-Verbose "Using POST body '$Body'"
 		Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
 	}
@@ -222,5 +343,117 @@ function Send-TwitterDm {
 	}
 }
 
+########################################################################################################################
+# Split-Tweet
+# Function for the PowerShell MyTwitter module
+# Twitter has a max tweet message length of 140 characters and you may sometimes want to split a message into smaller
+# seperate tweets to comply to 140 character limit.
+# Date: 05/10/2014
+# Author; Stefan Stranger
+# Version: 0.1
+# Changes: 
+# ToDo: Only split on complete words.
+#       Make pipeline aware
+#       Return a string object with more properties, like length etc.
+########################################################################################################################
+Function Split-Tweet {
+  <#
+  .SYNOPSIS
+   This Function splits a Twitter message that exceed the maximum length of 140 characters.
+  .DESCRIPTION
+   This Function splits a Twitter message that exceed the maximum length of 140 characters.
+  .EXAMPLE
+   $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
+   Split-Tweet -Message $Message
+   This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope yo like my new split-tweet  
+   function.
+  .EXAMPLE
+   $message = 1..100 -join ""
+   Split-Tweet -Message $Message -Length 10 -Postfix '>...'
+   123456 >...
+   789101 >...
+   112131 >...
+   415161 >...
+   Splits a message into seperate messages with a length of 10 characters with a Postfix.
+  .EXAMPLE
+   $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
+   Split-Tweet -Message $Message -Postfix ">..." | Select-Object @{L="Message";E={$_}} | % {Send-Tweet -Message $_.Message}
+   Splits a message into seperate messages and pipes the result to the Send-Tweet Function.
+  #>
+
+  [CmdletBinding()]
+    [Alias()]
+    [OutputType([string])]
+    Param
+    (
+        # Message you want to split
+        [Parameter(
+                   HelpMessage = 'What is the message you want to split?',
+                   Mandatory = $true,
+                   ValueFromPipelineByPropertyName = $false,
+                   Position = 0)]
+        [string]$Message,
+        [Parameter(
+                   HelpMessage = 'What is length of the message?',
+                   Mandatory = $false,
+                   ValueFromPipelineByPropertyName = $false)]
+        [int]$Length = 139, 
+        [Parameter(
+                   HelpMessage = 'What is the postfix for the Twitter message?',
+                   Mandatory = $false,
+                   ValueFromPipelineByPropertyName = $false)]
+        [string]$Postfix
+    )
+
+
+  #Check length of Tweet
+  if ($Message.length -gt $Length)
+  {
+    Write-Verbose 'Message needs to be splitted'
+    #Total length of message
+    Write-Verbose "Length of message is $($message.length)"
+    #Calculate number message
+    Write-Verbose "Split message in $(($message.Length)/$Length) times"
+    #Create an array
+    $numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
+    Write-Verbose "`$numberofmsgs: $numberofmsgs"
+    $myarray = 1..$numberofmsgs
+    $start = 0
+    $counter = 0 
+    $result = @()
+    #Check if Postfix param is being used and if so count number of characters
+    if ($Postfix)
+    {
+        Write-Verbose "`$Postfix length: $($Postfix.Length)"
+        $Length = $Length - $($Postfix.Length)
+        $numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
+    }
+    $myarray | ForEach-Object  -Process {
+      Write-Verbose "`$start: $start"
+      $counter += 1
+      Write-Verbose "`$counter: $counter"
+      if ($counter -lt $numberofmsgs)
+      {
+        $result += $Message.substring($start,$Length) + " $Postfix"
+        $start = $start + $Length
+      }
+      else
+      {
+        if ($start -ne $Message.Length-1)
+            {
+          $result += $Message.substring($start,($Message.Length - $start))
+        }
+      }
+    }
+  }
+  else
+  {
+    Write-Verbose 'No need to split tweet'
+  }
+  return $result
+}
+
 Export-ModuleMember Send-Tweet
 Export-ModuleMember Send-TwitterDm
+Export-ModuleMember Split-Tweet
+Export-ModuleMember Set-OAuthAuthorization
