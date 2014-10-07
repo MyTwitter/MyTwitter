@@ -347,11 +347,14 @@ function Send-TwitterDm {
 # Split-Tweet
 # Function for the PowerShell MyTwitter module
 # Twitter has a max tweet message length of 140 characters and you may sometimes want to split a message into smaller
-# seperate tweets to comply to 140 character limit.
+# separate tweets to comply to 140 character limit.
 # Date: 05/10/2014
 # Author; Stefan Stranger
-# Version: 0.3
-# Changes: split at word boundaries, removed parameter postfix.
+# Version: 0.4
+# Changes: 
+#		(0.2) = split at word boundaries, removed parameter postfix, removed
+#		(0.3) = Return a string object with more properties, like length etc.
+#		(0.4) = removed Length parameter. The function will will decide on the size of the tweet.
 # ToDo: Only split on complete words. << added @sqlchow
 #       Make pipeline aware
 #       Return a string object with more properties, like length etc. << added @sstranger
@@ -365,17 +368,12 @@ Function Split-Tweet {
   .EXAMPLE
    $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
    Split-Tweet -Message $Message
-   This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope yo like my new split-tweet  
-   function.
-  .EXAMPLE
-   $message = 1..100 -join ""
-   Split-Tweet -Message $Message -Length 10 
-   123456 [1\4]
-   789101 [2\4]
-   112131 [3\4]
-   415161 [4\4]
-   Splits a message into seperate messages with a length of 10 characters with a Postfix.
-  .EXAMPLE
+   Message                                                                                                          Length
+   -------                                                                                                          ------
+   This is a very long message that needs to be splitted be...                                                         134
+   split-tweet function. [2\2]                                                                                          27
+
+   .EXAMPLE
    $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
    Split-Tweet -Message $Message | Select-Object @{L="Message";E={$_}} | % {Send-Tweet -Message $_.Message}
    Splits a message into seperate messages and pipes the result to the Send-Tweet Function.
@@ -392,15 +390,10 @@ Function Split-Tweet {
                    Mandatory = $true,
                    ValueFromPipelineByPropertyName = $false,
                    Position = 0)]
-        [string]$Message,
-        [Parameter(
-                   HelpMessage = 'What is length of the message?',
-                   Mandatory = $false,
-                   ValueFromPipelineByPropertyName = $false)]
-        [int]$Length = 139
+        [string]$Message
     )
 
-
+  [int]$Length = 130
   #Check length of Tweet
   if ($Message.length -gt $Length)
   {
