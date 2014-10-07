@@ -350,9 +350,9 @@ function Send-TwitterDm {
 # seperate tweets to comply to 140 character limit.
 # Date: 05/10/2014
 # Author; Stefan Stranger
-# Version: 0.1
-# Changes: 
-# ToDo: Only split on complete words.
+# Version: 0.2
+# Changes: split at word boundaries, removed parameter postfix.
+# ToDo: Only split on complete words. << added @sqlchow
 #       Make pipeline aware
 #       Return a string object with more properties, like length etc.
 ########################################################################################################################
@@ -369,19 +369,19 @@ Function Split-Tweet {
    function.
   .EXAMPLE
    $message = 1..100 -join ""
-   Split-Tweet -Message $Message -Length 10 -Postfix '>...'
-   123456 >...
-   789101 >...
-   112131 >...
-   415161 >...
+   Split-Tweet -Message $Message -Length 10 
+   123456 [1\4]
+   789101 [2\4]
+   112131 [3\4]
+   415161 [4\4]
    Splits a message into seperate messages with a length of 10 characters with a Postfix.
   .EXAMPLE
    $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
-   Split-Tweet -Message $Message -Postfix ">..." | Select-Object @{L="Message";E={$_}} | % {Send-Tweet -Message $_.Message}
+   Split-Tweet -Message $Message | Select-Object @{L="Message";E={$_}} | % {Send-Tweet -Message $_.Message}
    Splits a message into seperate messages and pipes the result to the Send-Tweet Function.
   #>
 
-  [CmdletBinding()]
+	[CmdletBinding()]
     [Alias()]
     [OutputType([string])]
     Param
@@ -397,12 +397,7 @@ Function Split-Tweet {
                    HelpMessage = 'What is length of the message?',
                    Mandatory = $false,
                    ValueFromPipelineByPropertyName = $false)]
-        [int]$Length = 139, 
-        [Parameter(
-                   HelpMessage = 'What is the postfix for the Twitter message?',
-                   Mandatory = $false,
-                   ValueFromPipelineByPropertyName = $false)]
-        [string]$Postfix
+        [int]$Length = 139
     )
 
 
@@ -417,33 +412,56 @@ Function Split-Tweet {
     #Create an array
     $numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
     Write-Verbose "`$numberofmsgs: $numberofmsgs"
-    $myarray = 1..$numberofmsgs
-    $start = 0
     $counter = 0 
     $result = @()
-    #Check if Postfix param is being used and if so count number of characters
-    if ($Postfix)
+
+    #extract all the words for splitting the stream
+    $wordCollection = [Regex]::Split($Message, '((?ins)(\w+))');
+    $collectionCount = $wordCollection.Count
+    Write-Verbose "number of words in message: $collectionCount"
+
+    #add auto-post fix like [1\n]
+	$Postfix = '['+'1\'+ $numberofmsgs.ToString() +']'
+	Write-Verbose "`$Postfix length: $($Postfix.Length)"
+
+	#if people tweet something that is greater than 1400 chars
+	#we may need to account for that.
+	$Length = $Length - $($Postfix.Length) + 2
+	$numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length)) 
+    
+    #word iterator and message container
+    $wordIterator = 0
+    $tempMessage=""
+
+    while($wordIterator -lt $collectionCount) 
     {
-        Write-Verbose "`$Postfix length: $($Postfix.Length)"
-        $Length = $Length - $($Postfix.Length)
-        $numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
-    }
-    $myarray | ForEach-Object  -Process {
-      Write-Verbose "`$start: $start"
-      $counter += 1
-      Write-Verbose "`$counter: $counter"
-      if ($counter -lt $numberofmsgs)
-      {
-        $result += $Message.substring($start,$Length) + " $Postfix"
-        $start = $start + $Length
-      }
-      else
-      {
-        if ($start -ne $Message.Length-1)
-            {
-          $result += $Message.substring($start,($Message.Length - $start))
-        }
-      }
+        #May not be a good way of doing this but, works for now.
+        $tempMsgLength = $tempMessage.Length
+        $currentWordLength = $wordCollection[$wordIterator].Length
+        $postFixLength = $Postfix.Length
+        
+
+	    While((($tempMsgLength + $currentWordLength + $postFixLength) -lt $Length) -and ($wordIterator -lt $collectionCount))
+	    {
+		    $tempMessage = $tempMessage + $wordCollection[$wordIterator]
+            
+            #housekeeping
+            $tempMsgLength = $tempMessage.Length
+            $currentWordLength = $wordCollection[$wordIterator].Length
+		    $wordIterator += 1
+    
+	    }
+
+        #if the parameter is not specified only then update the default postfix.
+        #not needed any more if(-not $PSBoundParameters.ContainsKey('Postfix')){}
+		$counter +=1;
+		$Postfix = '[' + "$counter" + '\' + $numberofmsgs.ToString() + ']'
+
+        #passing message to result array
+        $result += $tempMessage + " $Postfix"
+
+        Write-Verbose "Message: $tempMessage $Postfix" 
+        $tempMessage = ""
     }
   }
   else
@@ -451,6 +469,55 @@ Function Split-Tweet {
     Write-Verbose 'No need to split tweet'
   }
   return $result
+}
+
+########################################################################################################################
+# Get-ShortURL
+# Function for the PowerShell MyTwitter module
+# The function gets a shortened URL for using when you need to embed web-links.
+# Date: 05/10/2014
+# Author: SqlChow
+# Version: 0.1
+# Changes: 
+# ToDo: Maybe we need to export it. However, it can stay inside the module.
+########################################################################################################################
+Function Get-ShortURL {
+  <#
+  .SYNOPSIS
+   This Function creats a shortened URL.
+
+  .DESCRIPTION
+   This Function creats a shortened URL using the tinyURL service. The function is based on
+   a powertip on http://powershell.com/cs/blogs/tips/archive/2014/09/25/creating-tinyurls.aspx
+
+  .EXAMPLE
+   Get-ShortURL -URL "https://raw.githubusercontent.com/stefanstranger/MyTwitter/master/MyTwitter.psm1"
+   http://tinyurl.com/k8tktsk
+
+  .LINK
+    http://powershell.com/cs/blogs/tips/archive/2014/09/25/creating-tinyurls.aspx
+  #>
+
+    [CmdletBinding()]
+    [Alias()]
+    [OutputType([string])]
+    Param
+    (
+        # Message you want to split
+        [Parameter(
+                   HelpMessage = 'The URL that needs shortening',
+                   Mandatory = $true,
+                   ValueFromPipelineByPropertyName = $false,
+                   Position = 0)]
+        [string]$URL
+    )
+
+    #code here
+    $shortenedURL = $null;
+    $tinyUrlApiLink = "http://tinyurl.com/api-create.php?url=$URL";
+    $webClient = New-Object -TypeName System.Net.WebClient;
+    $shortenedURL = $webClient.DownloadString($tinyUrlApiLink).ToString();
+    return $shortenedURL;
 }
 
 Export-ModuleMember Send-Tweet
