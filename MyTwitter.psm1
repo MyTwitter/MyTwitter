@@ -350,11 +350,11 @@ function Send-TwitterDm {
 # seperate tweets to comply to 140 character limit.
 # Date: 05/10/2014
 # Author; Stefan Stranger
-# Version: 0.2
+# Version: 0.3
 # Changes: split at word boundaries, removed parameter postfix.
 # ToDo: Only split on complete words. << added @sqlchow
 #       Make pipeline aware
-#       Return a string object with more properties, like length etc.
+#       Return a string object with more properties, like length etc. << added @sstranger
 ########################################################################################################################
 Function Split-Tweet {
   <#
@@ -458,7 +458,13 @@ Function Split-Tweet {
 		$Postfix = '[' + "$counter" + '\' + $numberofmsgs.ToString() + ']'
 
         #passing message to result array
-        $result += $tempMessage + " $Postfix"
+        #Creating a msg object with message and length property
+        $msgobject = [pscustomobject]@{
+            Message= $tempMessage + " $Postfix"
+            Length = ($tempMessage + " $Postfix").Length
+            }
+
+        $result += $msgobject
 
         Write-Verbose "Message: $tempMessage $Postfix" 
         $tempMessage = ""
