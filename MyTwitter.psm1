@@ -388,7 +388,7 @@ Function Split-Tweet {
         [Parameter(
                    HelpMessage = 'What is the message you want to split?',
                    Mandatory = $true,
-                   ValueFromPipelineByPropertyName = $false,
+                   Valuefrompipeline=$true,
                    Position = 0)]
         [string]$Message
     )
