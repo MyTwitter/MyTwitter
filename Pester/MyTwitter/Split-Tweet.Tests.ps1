@@ -8,7 +8,12 @@
 
 #>
 
-Import-Module MyTwitter
+Remove-Module MyTwitter -Force -ErrorAction SilentlyContinue
+
+$scriptRoot = Split-Path -Path $MyInvocation.MyCommand.Path
+cd $scriptRoot
+cd ..\..
+Import-Module .\MyTwitter.psm1 -Force -ErrorAction Stop
 
 #Variables:
 $Message = "This is a very long message that needs to be splitted because it's too long for the max twitter characters. Hope you like my new split-tweet function."
@@ -30,3 +35,5 @@ Describe "Split-Tweet" {
                 (split-tweet -message $message).message[0] | Should Match "^This*"
     }
 }
+
+cd $scriptRoot
