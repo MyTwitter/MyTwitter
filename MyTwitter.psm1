@@ -526,12 +526,13 @@ Function Get-ShortURL {
 # You sometimes want to replace words in your tweet to comply to max tweet length of 140 characters
 # Date: 09/10/2014
 # Author; Stefan Stranger
-# Version: 0.1
+# Version: 0.2
 # Changes: 
 #		(0.1) = initial version
+#   (0.2) = renamed function from Shorten-Tweet to Resize-Tweet
 # ToDo: - speed up performance. .Net class is faster but does not do case insensitive replace.
 ########################################################################################################################
-Function Shorten-Tweet {
+Function Resize-Tweet {
   <#
   .SYNOPSIS
    This Function shortens Twitter messages for words stored in a hashtable.
@@ -540,7 +541,7 @@ Function Shorten-Tweet {
    limit of 140 characters.
   .EXAMPLE
    $Message = "This is an example tweet for testing purposes. And here are some words to replace: two, and, One, at, too"
-   Shorten-Tweet -Message $Message
+   Resize-Tweet -Message $Message
    c:\
    This is an example tweet 4 testing purposes. & here are some word to replace: 2, &, 1, @, 2                                                                                         27
   #>
@@ -609,5 +610,5 @@ Function Shorten-Tweet {
 Export-ModuleMember Send-Tweet
 Export-ModuleMember Send-TwitterDm
 Export-ModuleMember Split-Tweet
-Export-moduleMember Shorten-Tweet
+Export-moduleMember Resize-Tweet
 Export-ModuleMember Set-OAuthAuthorization
