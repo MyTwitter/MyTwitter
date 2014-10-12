@@ -521,7 +521,7 @@ Function Get-ShortURL {
 
 
 ########################################################################################################################
-# Shorten-Tweet
+# Resize-Tweet
 # Function for the PowerShell MyTwitter module
 # You sometimes want to replace words in your tweet to comply to max tweet length of 140 characters
 # Date: 09/10/2014
