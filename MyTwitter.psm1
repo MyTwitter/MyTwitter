@@ -6,8 +6,7 @@
 	-------------------------------------------------------------------------
 	 Module Name: MyTwitter
 	 Description: This Twitter module was built to give a Twitter user the ability
-		to send tweets from his account and to DM other users.  At this time this
-		is the only functionality available.
+		to interact with Twitter via Powershell.
 
 		Before importing this module, you must create your own Twitter application
 		on apps.twitter.com and generate an access token under the API keys section
@@ -161,6 +160,7 @@ function Get-OAuthAuthorization {
 # Set-OAuthAuthorization
 # For the Twitter Authentication you need to use your own Client Application Consumer key and Consumer Secret
 # Request your Twitter API Key at https://apps.twitter.com/
+# Instructions for creating your required Twitter app: http://www.adamtheautomator.com/twitter-powershell/
 # We need the following info from the Twitter application you created
 # API key, the API secret, an Access token and an Access token secret
 # Date: 25/9/2014
