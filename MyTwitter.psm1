@@ -581,7 +581,7 @@ Function Resize-Tweet {
 
 
 
-    Write-Verbose "Current lenght of message: $($message.Length)"
+    Write-Verbose "Current length of message: $($message.Length)"
 
     foreach ($h in $replacehash.GetEnumerator()) {
       $Pattern = $h.Name
@@ -593,7 +593,7 @@ Function Resize-Tweet {
 
     }
 
-    Write-Verbose "New lenght of message: $($message.Length)"
+    Write-Verbose "New length of message: $($message.Length)"
     #Creating a msg object with message and length property
     $msgobject = [pscustomobject]@{
         Message= $Message
