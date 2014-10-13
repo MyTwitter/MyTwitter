@@ -40,14 +40,6 @@ function Get-OAuthAuthorization {
 		If you're sending a DM to someone, this is the DM's text.
 	.PARAMETER Username
 		If you're sending a DM to someone, this is the username you'll be sending to.
-	.PARAMETER ApiKey
-		The API key for the Twitter application you previously setup.
-	.PARAMETER ApiSecret
-		The API secret key for the Twitter application you previously setup.
-	.PARAMETER AccessToken
-		The access token that you generated within your Twitter application.
-	.PARAMETER
-		The access token secret that you generated within your Twitter application.
 	#>
 	[CmdletBinding(DefaultParameterSetName = 'None')]
 	[OutputType('System.Management.Automation.PSCustomObject')]
@@ -68,25 +60,17 @@ function Get-OAuthAuthorization {
 		try {
 			[Reflection.Assembly]::LoadWithPartialName("System.Security") | Out-Null
 			[Reflection.Assembly]::LoadWithPartialName("System.Net") | Out-Null
+			
+			if (!(Get-MyTwitterConfiguration)) {
+				throw 'No MyTwitter configuration detected.  Please run New-MyTwitterConfiguration'
+			} else {
+				$script:MyTwitterConfiguration = Get-MyTwitterConfiguration
+			}
 		} catch {
 			Write-Error $_.Exception.Message
 		}
-
-    if(!(Test-Path -Path HKCU:\Software\MyTwitter))
-    {
-      #Call Set-OAuthorization function
-      Set-OAuthAuthorization
-    }
-    else
-    {
-        Write-Verbose "Retrieving Twitter Application settings from registry HKCU:\Software\MyTwitter"
-        $global:APIKey = (Get-Item HKCU:\Software\MyTwitter).getvalue("APIKey")
-        $global:APISecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("APISecret")
-        $global:AccessToken = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessToken")
-        $global:AccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
-
-    }
 	}
+	
 	
 	process {
 		try {
@@ -104,11 +88,11 @@ function Get-OAuthAuthorization {
 			## Build the signature
 			$SignatureBase = "$([System.Uri]::EscapeDataString($HttpEndPoint))&"
 			$SignatureParams = @{
-				'oauth_consumer_key' = $ApiKey;
+				'oauth_consumer_key' = $MyTwitterConfiguration.ApiKey;
 				'oauth_nonce' = $OauthNonce;
 				'oauth_signature_method' = 'HMAC-SHA1';
 				'oauth_timestamp' = $OauthTimestamp;
-				'oauth_token' = $AccessToken;
+				'oauth_token' = $MyTwitterConfiguration.AccessToken;
 				'oauth_version' = '1.0';
 			}
 			if ($TweetMessage) {
@@ -126,7 +110,7 @@ function Get-OAuthAuthorization {
 			Write-Verbose "Base signature generated '$SignatureBase'"
 			
 			## Create the hashed string from the base signature
-			$SignatureKey = [System.Uri]::EscapeDataString($ApiSecret) + "&" + [System.Uri]::EscapeDataString($AccessTokenSecret);
+			$SignatureKey = [System.Uri]::EscapeDataString($MyTwitterConfiguration.ApiSecret) + "&" + [System.Uri]::EscapeDataString($MyTwitterConfiguration.AccessTokenSecret);
 			
 			$hmacsha1 = new-object System.Security.Cryptography.HMACSHA1;
 			$hmacsha1.Key = [System.Text.Encoding]::ASCII.GetBytes($SignatureKey);
@@ -156,22 +140,21 @@ function Get-OAuthAuthorization {
 	}
 }
 
-########################################################################################################################
-# Set-OAuthAuthorization
-# For the Twitter Authentication you need to use your own Client Application Consumer key and Consumer Secret
-# Request your Twitter API Key at https://apps.twitter.com/
-# Instructions for creating your required Twitter app: http://www.adamtheautomator.com/twitter-powershell/
-# We need the following info from the Twitter application you created
-# API key, the API secret, an Access token and an Access token secret
-# Date: 25/9/2014
-# Author; Stefan Stranger
-# Version: 0.1
-# Changes: 
-# ToDo: Check spaces at begin of Twitter API settings. Sometimes a space is being copied from webpage.
-########################################################################################################################
-Function Set-OAuthAuthorization
-{
-  <#
+Function New-MyTwitterConfiguration {
+	########################################################################################################################
+	# Set-OAuthAuthorization
+	# For the Twitter Authentication you need to use your own Client Application Consumer key and Consumer Secret
+	# Request your Twitter API Key at https://apps.twitter.com/
+	# Instructions for creating your required Twitter app: http://www.adamtheautomator.com/twitter-powershell/
+	# We need the following info from the Twitter application you created
+	# API key, the API secret, an Access token and an Access token secret
+	# Date: 25/9/2014
+	# Author; Stefan Stranger
+	# Version: 0.1
+	# Changes:
+	# ToDo: Check spaces at begin of Twitter API settings. Sometimes a space is being copied from webpage.
+	########################################################################################################################
+	<#
 	.SYNOPSIS
 		This Function stores the Twitter API Application settings in the registry.
 	.EXAMPLE
@@ -181,66 +164,98 @@ Function Set-OAuthAuthorization
     If not it opens the Twitter API application website to retrieve the Twitter API Settings.
 	#>
  
-    [CmdletBinding(SupportsShouldProcess=$true)]
-      param
-      (
-        [Parameter(
+    [CmdletBinding()]
+      param (
+        [Parameter(Mandatory,
           HelpMessage='What is the Twitter Client API Key?')]
         [string]$APIKey,
-        [Parameter(
+        [Parameter(Mandatory,
           HelpMessage='What is the Twitter Client API Secret?')]
         [string]$APISecret,
-        [Parameter(
+        [Parameter(Mandatory,
           HelpMessage='What is the Twitter Client Access Token?')]
         [string]$AccessToken,
-        [Parameter(
+        [Parameter(Mandatory,
           HelpMessage='What is the Twitter Client Access Token Secret?')]
-        [string]$AccessTokenSecret,
-        [switch] $Force
+		[string]$AccessTokenSecret,
+		[switch]$Force
       )
+	begin {
+		$RegKey = 'HKCU:\Software\MyTwitter'
+	}
+	process {
+		#API key, the API secret, an Access token and an Access token secret are provided by Twitter application
+		Write-Verbose "Checking registry to see if the Twitter application keys are already stored"
+		if (!(Test-Path -Path $RegKey)) {
+			Write-Verbose "No MyTwitter configuration found in registry. Creating one."
+			New-Item -Path ($RegKey | Split-Path -Parent) -Name ($RegKey | Split-Path -Leaf) | Out-Null
+		}
+		
+		$Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
+		foreach ($Value in $Values) {
+			if ((Get-Item $RegKey).GetValue($Value) -and !$Force.IsPresent) {
+				Write-Verbose "'$RegKey\$Value' already exists. Skipping."
+			} else {
+				Write-Verbose "Creating $RegKey\$Value"
+				New-ItemProperty $RegKey -Name $Value -Value ((Get-Variable $Value).Value) -Force | Out-Null
+			}
+		}
+	}
+}
 
-    Write-Verbose "Function Set-OAuthAuthorization started"
+Function Get-MyTwitterConfiguration {
+	<#
+	.SYNOPSIS
+		This Function retrieves the Twitter API Application settings from the registry.
+	.EXAMPLE
+		PS> Get-Configuration
+	
+		This example will retrieve all (if any) MyTwitter configuration values
+		from the registry.
+	#>
+	
+	[CmdletBinding()]
+	param ()
+	process {
+		$RegKey = 'HKCU:\Software\MyTwitter'
+		if (!(Test-Path -Path $RegKey)) {
+			Write-Verbose "No MyTwitter configuration found in registry"
+		} else {
+			$Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
+			$Output = @{ }
+			foreach ($Value in $Values) {
+				if ((Get-Item $RegKey).GetValue($Value)) {
+					$Output.$Value = (Get-Item $RegKey).GetValue($Value)
+				} else {
+					$Output.$Value = ''
+				}
+			}
+			[pscustomobject]$Output
+		}
+	}
+}
 
-    
-    #API key, the API secret, an Access token and an Access token secret are provided by Twitter application/
-    Write-Verbose "Check Registry if the Twitter Application keys are already stored"
-    if(!(Test-Path -Path HKCU:\Software\MyTwitter) -or $force)
-    {
-        Write-Output "You first need to register a Twitter Application and store the API key, the API secret, an Access token and an Access token secret on your machine `n `nGo to https://apps.twitter.com"
-        start "https://apps.twitter.com/"
-        $APIKey = Read-Host "Enter Twitter API Key"
-        $APISecret = Read-Host "Enter Twitter API Secret"
-        $AccessToken = Read-Host "Enter Twitter Access Token"
-        $AccessTokenSecret = Read-Host "Enter Twitter Access Token Secret"
-        Write-Verbose "Storing Consumer and Consumer Secret keys in Registry HKCU:\Software\MyTwitter"
-        #Store Application API settings in Registry
-
-        if($APIKey -and $APISecret -and $AccessToken -and $AccessTokenSecret )
-        {
-            New-Item -Path hkcu:\software -Name MyTwitter | out-null
-            New-ItemProperty HKCU:\Software\MyTwitter -name "APIKey" -value "$APIKey" | out-null
-            New-ItemProperty HKCU:\Software\MyTwitter -name "APISecret" -value "$APISecret" | out-null
-            New-ItemProperty HKCU:\Software\MyTwitter -name "AccessToken" -value "$AccessToken" | out-null
-            New-ItemProperty HKCU:\Software\MyTwitter -name "AccessTokenSecret" -value "$AccessTokenSecret" | out-null
-        }
-        else 
-        {
-          write-error "Please restart Set-OAuthAuthorization Function. One of the requested properties is empty"
-        }
-    }
-    else
-    {
-        Write-Verbose "Retrieving Twitter Application settings from registry HKCU:\Software\MyTwitter"
-        $APIKey = (Get-Item HKCU:\Software\MyTwitter).getvalue("APIKey")
-        $APISecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("APISecret")
-        $AccessToken = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessToken")
-        $AccessTokenSecret = (Get-Item HKCU:\Software\MyTwitter).getvalue("AccessTokenSecret")
-    }
-
-    Write-Output "Finished Storing\Retrieving Twitter Application Authentication"
-    Write-Verbose "Function Set-OAuthAuthorization finished"
-
-
+Function Remove-MyTwitterConfiguration {
+	<#
+	.SYNOPSIS
+		This function removes the Twitter API Application settings from the registry.
+	.EXAMPLE
+		PS> Remove-MyTwitterConfiguration
+	
+		This example will remove all (if any) MyTwitter configuration values
+		from the registry.
+	#>
+	
+	[CmdletBinding()]
+	param ()
+	process {
+		$RegKey = 'HKCU:\Software\MyTwitter'
+		if (!(Test-Path -Path $RegKey)) {
+			Write-Verbose "No MyTwitter configuration found in registry"
+		} else {
+			Remove-Item $RegKey -Force
+		}
+	}
 }
 
 function Escape-SpecialCharacters
@@ -603,12 +618,21 @@ Function Resize-Tweet {
     $result += $msgobject
 
     $result
-
-
+	
+	
 }
 
-Export-ModuleMember Send-Tweet
-Export-ModuleMember Send-TwitterDm
-Export-ModuleMember Split-Tweet
-Export-moduleMember Resize-Tweet
-Export-ModuleMember Set-OAuthAuthorization
+Function Get-TweetTimeline {
+	[CmdletBinding()]
+	[OutputType('System.Management.Automation.PSCustomObject')]
+	param (
+		[string[]]$User
+	)
+	process {
+		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/user_timeline.json' #working
+		#$HttpEndPoint = "http://api.twitter.com/1.1/statuses/user_timeline.json?include_entities=true&include_rts=true&exclude_replies=true&count=20&screen_name=$user" #notworking
+		$AuthorizationString = Get-OAuthAuthorization -HttpEndPoint $HttpEndPoint -Verbose
+		Invoke-RestMethod -URI $HttpEndPoint -Method Get -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
+		$Timeline | Select Id, created_at, text, retweet_count, favorite_count
+	}
+}
