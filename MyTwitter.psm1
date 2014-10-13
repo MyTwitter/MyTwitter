@@ -141,29 +141,15 @@ function Get-OAuthAuthorization {
 }
 
 Function New-MyTwitterConfiguration {
-	########################################################################################################################
-	# Set-OAuthAuthorization
-	# For the Twitter Authentication you need to use your own Client Application Consumer key and Consumer Secret
-	# Request your Twitter API Key at https://apps.twitter.com/
-	# Instructions for creating your required Twitter app: http://www.adamtheautomator.com/twitter-powershell/
-	# We need the following info from the Twitter application you created
-	# API key, the API secret, an Access token and an Access token secret
-	# Date: 25/9/2014
-	# Author; Stefan Stranger
-	# Version: 0.1
-	# Changes:
-	# ToDo: Check spaces at begin of Twitter API settings. Sometimes a space is being copied from webpage.
-	########################################################################################################################
 	<#
 	.SYNOPSIS
 		This Function stores the Twitter API Application settings in the registry.
 	.EXAMPLE
-		Set-OAuthAuthorization
+		PS> New-MyTwitterConfiguration -APIKey akey -APISecret asecret -AccessToken sometoken -AccessTokenSecret atokensecret
 	
-		This example will check if the Twitter API Application settings are already stored in the registry.
-    If not it opens the Twitter API application website to retrieve the Twitter API Settings.
+		This example will create 4 registry values (APIKey,APISecret,AccessToken and AccessTokenSecret) in the
+		MyTwitter registry key with the observed values.
 	#>
- 
     [CmdletBinding()]
       param (
         [Parameter(Mandatory,
