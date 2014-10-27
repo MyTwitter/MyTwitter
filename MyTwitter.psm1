@@ -45,13 +45,12 @@ function Get-OAuthAuthorization {
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
 		[Parameter(Mandatory)]
+		[ValidateSet('Timeline','DirectMessage','Update')]
+		[string]$Api,
+		[Parameter(Mandatory)]
 		[string]$HttpEndPoint,
-		[Parameter(Mandatory, ParameterSetName = 'NewTweet')]
-		[string]$TweetMessage,
-		[Parameter(Mandatory, ParameterSetName = 'DM')]
-		[string]$DmMessage,
-		[Parameter(Mandatory, ParameterSetName = 'DM')]
-		[string]$Username
+		[Parameter(Mandatory)]
+		[hashtable]$ApiParameters
 	)
 	
 	begin {
@@ -70,7 +69,6 @@ function Get-OAuthAuthorization {
 			Write-Error $_.Exception.Message
 		}
 	}
-	
 	
 	process {
 		try {
@@ -95,11 +93,10 @@ function Get-OAuthAuthorization {
 				'oauth_token' = $MyTwitterConfiguration.AccessToken;
 				'oauth_version' = '1.0';
 			}
-			if ($TweetMessage) {
-				$SignatureParams.status = $TweetMessage
-			} elseif ($DmMessage) {
-				$SignatureParams.screen_name = $Username
-				$SignatureParams.text = $DmMessage
+			
+			## Add API-specific params to the signature
+			foreach ($Param in $ApiParameters.GetEnumerator()) {
+				$SignatureParams[$Param.Key] = $Param.Value	
 			}
 			
 			## Create a string called $SignatureBase that joins all URL encoded 'Key=Value' elements with a &
@@ -268,7 +265,6 @@ function Escape-SpecialCharacters
 	}
 }
 
-
 function Send-Tweet {
 	<#
 	.SYNOPSIS
@@ -293,9 +289,7 @@ function Send-Tweet {
 		
 		####Added following line/function to properly escape !,*,(,) special characters
 		$Message = $(Escape-SpecialCharacters -Message $Message)
-		####
-		
-		$AuthorizationString = Get-OAuthAuthorization -TweetMessage $Message -HttpEndPoint $HttpEndPoint
+		$AuthorizationString = Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status' = $Message } -HttpEndPoint $HttpEndPoint
 		
 		$Body = "status=$Message"
 		Write-Verbose "Using POST body '$Body'"
@@ -329,8 +323,8 @@ function Send-TwitterDm {
 	
 	process {
 		$HttpEndPoint = 'https://api.twitter.com/1.1/direct_messages/new.json'
-		
-		$AuthorizationString = Get-OAuthAuthorization -DmMessage $Message -HttpEndPoint $HttpEndPoint -Username $Username -Verbose
+	
+		$AuthorizationString = Get-OAuthAuthorization -Api 'DirectMessage' -ApiParameters @{ 'screen_name' = $Username; 'text' = $Message } -HttpEndPoint $HttpEndPoint
 		
 		## Convert the message to a Byte array
 		$Message = [System.Uri]::EscapeDataString($Message)
@@ -615,7 +609,15 @@ Function Get-TweetTimeline {
 		[string[]]$User
 	)
 	process {
-		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/user_timeline.json' #working
+		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/user_timeline.json'
+					
+		$AuthorizationString = Get-OAuthAuthorization -TweetMessage $Message -HttpEndPoint $HttpEndPoint
+		
+		$Body = "status=$Message"
+		Write-Verbose "Using POST body '$Body'"
+		Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
+		
+		
 		#$HttpEndPoint = "http://api.twitter.com/1.1/statuses/user_timeline.json?include_entities=true&include_rts=true&exclude_replies=true&count=20&screen_name=$user" #notworking
 		$AuthorizationString = Get-OAuthAuthorization -HttpEndPoint $HttpEndPoint -Verbose
 		Invoke-RestMethod -URI $HttpEndPoint -Method Get -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
