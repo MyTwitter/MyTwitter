@@ -531,7 +531,7 @@ Function Resize-Tweet {
    $Message = "This is an example tweet for testing purposes. And here are some words to replace: two, and, One, at, too"
    Resize-Tweet -Message $Message
    c:\
-   This is an example tweet 4 testing purposes. & here are some word to replace: 2, &, 1, @, 2                                                                                         27
+   This is an example tweet 4 testing purposes. & here are some word to replace: 2, &, 1, @, 2                              
   #>
 
 	[CmdletBinding()]
@@ -596,6 +596,24 @@ Function Resize-Tweet {
 }
 
 Function Get-TweetTimeline {
+<#
+  .SYNOPSIS
+   This Function retrieves the Timeline of a Twitter user.
+  .DESCRIPTION
+   This Function retrieves the Timeline of a Twitter user.
+  .EXAMPLE
+   $TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 10
+   $TimeLine | Out-Gridview -PassThru
+   
+   This example stores the retrieved Twitter timeline for user sstranger with a maximum of 10 tweets and pipes the result
+   to the Out-GridView cmdlet.
+   .EXAMPLE
+   $TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 100
+   $TimeLine | Sort-Object -Descending | Out-Gridview -PassThru
+   
+   This example stores the retrieved Twitter timeline for user sstranger with a maximum of 100 tweets,
+   sorts the result descending on retweet counts and pipes the result to the Out-GridView cmdlet.
+#>
 	[CmdletBinding()]
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
@@ -623,6 +641,7 @@ Function Get-TweetTimeline {
 		$ApiParams.GetEnumerator() | sort name | foreach { $HttpRequestUrl += "{0}={1}&" -f $_.Key, $_.Value }
 		$HttpRequestUrl = $HttpRequestUrl.Trim('&')
 		Write-Verbose "HTTP request URL is '$HttpRequestUrl'"
-		Invoke-RestMethod -URI $HttpRequestUrl -Method Get -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
+		Invoke-RestMethod -URI $HttpRequestUrl -Method Get -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/json"
+    
 	}
 }
