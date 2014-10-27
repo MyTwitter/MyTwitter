@@ -17,29 +17,24 @@
 #>
 
 function Get-OAuthAuthorization {
-	<#
+    <#
 	.SYNOPSIS
-		This function is used to setup all the appropriate security stuff needed to issue
-		API calls against Twitter's API.  It has been tested with v1.1 of the API.  It currently
-		includes support only for sending tweets from a single user account and to send DMs from
-		a single user account.
+		This function is used to create the signature and authorization headers needed to pass to OAuth
+		It has been tested with v1.1 of the API.
 	.EXAMPLE
-		Get-OAuthAuthorization -DmMessage 'hello' -HttpEndPoint 'https://api.twitter.com/1.1/direct_messages/new.json' -Username adam
+		Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status' = 'hello' } -HttpVerb GET -HttpEndPoint 'https://api.twitter.com/1.1/statuses/update.json'
 	
-		This example gets the authorization string needed in the HTTP POST method to send a direct
-		message with the text 'hello' to the user 'adam'.
-	.EXAMPLE
-		Get-OAuthAuthorization -TweetMessage 'hello' -HttpEndPoint 'https://api.twitter.com/1.1/statuses/update.json'
-	
-		This example gets the authorization string needed in the HTTP POST method to send out a tweet.
+		This example gets the authorization string needed in the HTTP GET method to send send a tweet 'hello'
+	.PARAMETER Api
+		The Twitter API name.  Currently, you can only use Timeline, DirectMessage or Update.
 	.PARAMETER HttpEndPoint
 		This is the URI that you must use to issue calls to the API.
-	.PARAMETER TweetMessage
-		Use this parameter if you're sending a tweet.  This is the tweet's text.
-	.PARAMETER DmMessage
-		If you're sending a DM to someone, this is the DM's text.
-	.PARAMETER Username
-		If you're sending a DM to someone, this is the username you'll be sending to.
+	.PARAMETER HttpVerb
+		The HTTP verb (either GET or POST) that the specific API uses.
+	.PARAMETER ApiParameters
+		A hashtable of parameters the specific Twitter API you're building the authorization
+		string for needs to include in the signature
+		
 	#>
 	[CmdletBinding(DefaultParameterSetName = 'None')]
 	[OutputType('System.Management.Automation.PSCustomObject')]
@@ -49,6 +44,9 @@ function Get-OAuthAuthorization {
 		[string]$Api,
 		[Parameter(Mandatory)]
 		[string]$HttpEndPoint,
+		[Parameter(Mandatory)]
+		[ValidateSet('POST', 'GET')]
+		[string]$HttpVerb,
 		[Parameter(Mandatory)]
 		[hashtable]$ApiParameters
 	)
@@ -94,18 +92,18 @@ function Get-OAuthAuthorization {
 				'oauth_version' = '1.0';
 			}
 			
+			$AuthorizationParams = $SignatureParams.Clone()
+			
 			## Add API-specific params to the signature
 			foreach ($Param in $ApiParameters.GetEnumerator()) {
 				$SignatureParams[$Param.Key] = $Param.Value
 			}
 			
-			$AuthorizationParams = $SignatureParams.Clone()
-			
 			## Create a string called $SignatureBase that joins all URL encoded 'Key=Value' elements with a &
 			## Remove the URL encoded & at the end and prepend the necessary 'POST&' verb to the front
-			$SignatureParams.GetEnumerator() | sort name | foreach { $SignatureBase += [System.Uri]::EscapeDataString("$($_.Key)=$($_.Value)&") }
+			$SignatureParams.GetEnumerator() | sort Name | foreach { $SignatureBase += [System.Uri]::EscapeDataString("$($_.Key)=$($_.Value)&") }
 			$SignatureBase = $SignatureBase.TrimEnd('%26')
-			$SignatureBase = 'POST&' + $SignatureBase
+			$SignatureBase = "$HttpVerb&" + $SignatureBase
 			Write-Verbose "Base signature generated '$SignatureBase'"
 			
 			## Create the hashed string from the base signature
@@ -284,7 +282,7 @@ function Send-Tweet {
 		
 		####Added following line/function to properly escape !,*,(,) special characters
 		$Message = $(Escape-SpecialCharacters -Message $Message)
-		$AuthorizationString = Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status' = $Message } -HttpEndPoint $HttpEndPoint
+		$AuthorizationString = Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
 		
 		$Body = "status=$Message"
 		Write-Verbose "Using POST body '$Body'"
@@ -319,7 +317,7 @@ function Send-TwitterDm {
 	process {
 		$HttpEndPoint = 'https://api.twitter.com/1.1/direct_messages/new.json'
 	
-		$AuthorizationString = Get-OAuthAuthorization -Api 'DirectMessage' -ApiParameters @{ 'screen_name' = $Username; 'text' = $Message } -HttpEndPoint $HttpEndPoint
+		$AuthorizationString = Get-OAuthAuthorization -Api 'DirectMessage' -ApiParameters @{ 'screen_name' = $Username; 'text' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
 		
 		## Convert the message to a Byte array
 		$Message = [System.Uri]::EscapeDataString($Message)
@@ -612,18 +610,19 @@ Function Get-TweetTimeline {
 		[int]$MaximumTweets = 200
 	)
 	process {
-		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/user_timeline.json'
-		
+		$HttpEndPoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
 		$ApiParams = @{
-			#'include_rts' = @{ $true = 'true';$false = 'false' }[$IncludeRetweets -eq $true]
-			#'exclude_replies' = @{ $true = 'false'; $false = 'true' }[$IncludeReplies -eq $true]
+			'include_rts' = @{ $true = 'true';$false = 'false' }[$IncludeRetweets -eq $true]
+			'exclude_replies' = @{ $true = 'false'; $false = 'true' }[$IncludeReplies -eq $true]
 			'count' = $MaximumTweets
 			'screen_name' = $Username
 		}
-		$Body = 'screen_name=randafaith'
-		Write-Verbose "Using body '$Body'"
-		$AuthorizationString = Get-OAuthAuthorization -Api 'Timeline' -ApiParameters $ApiParams -HttpEndPoint $HttpEndPoint
-		Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
-		#$Timeline | Select Id, created_at, text, retweet_count, favorite_count
+		$AuthorizationString = Get-OAuthAuthorization -Api 'Timeline' -ApiParameters $ApiParams -HttpEndPoint $HttpEndPoint -HttpVerb GET
+		
+		$HttpRequestUrl = "https://api.twitter.com/1.1/statuses/user_timeline.json?"
+		$ApiParams.GetEnumerator() | sort name | foreach { $HttpRequestUrl += "{0}={1}&" -f $_.Key, $_.Value }
+		$HttpRequestUrl = $HttpRequestUrl.Trim('&')
+		Write-Verbose "HTTP request URL is '$HttpRequestUrl'"
+		Invoke-RestMethod -URI $HttpRequestUrl -Method Get -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
 	}
 }
