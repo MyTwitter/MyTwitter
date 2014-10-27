@@ -96,8 +96,10 @@ function Get-OAuthAuthorization {
 			
 			## Add API-specific params to the signature
 			foreach ($Param in $ApiParameters.GetEnumerator()) {
-				$SignatureParams[$Param.Key] = $Param.Value	
+				$SignatureParams[$Param.Key] = $Param.Value
 			}
+			
+			$AuthorizationParams = $SignatureParams.Clone()
 			
 			## Create a string called $SignatureBase that joins all URL encoded 'Key=Value' elements with a &
 			## Remove the URL encoded & at the end and prepend the necessary 'POST&' verb to the front
@@ -114,16 +116,9 @@ function Get-OAuthAuthorization {
 			$OauthSignature = [System.Convert]::ToBase64String($hmacsha1.ComputeHash([System.Text.Encoding]::ASCII.GetBytes($SignatureBase)));
 			Write-Verbose "Using signature '$OauthSignature'"
 			
-			## Build the authorization headers using most of the signature headers elements.  This is joining all of the 'Key=Value' elements again
+			## Build the authorization headers.  This is joining all of the 'Key=Value' elements again
 			## and only URL encoding the Values this time while including non-URL encoded double quotes around each value
-			$AuthorizationParams = $SignatureParams
-			$AuthorizationParams.Add('oauth_signature', $OauthSignature)
-			
-			## Remove any API call-specific params from the authorization params
-			$AuthorizationParams.Remove('status')
-			$AuthorizationParams.Remove('text')
-			$AuthorizationParams.Remove('screen_name')
-			
+			$AuthorizationParams.Add('oauth_signature', $OauthSignature)	
 			$AuthorizationString = 'OAuth '
 			$AuthorizationParams.GetEnumerator() | sort name | foreach { $AuthorizationString += $_.Key + '="' + [System.Uri]::EscapeDataString($_.Value) + '", ' }
 			$AuthorizationString = $AuthorizationString.TrimEnd(', ')
@@ -606,21 +601,29 @@ Function Get-TweetTimeline {
 	[CmdletBinding()]
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
-		[string[]]$User
+		[Parameter(Mandatory)]
+		[string]$Username,
+		[Parameter()]
+		[switch]$IncludeRetweets = $true,
+		[Parameter()]
+		[switch]$IncludeReplies = $true,
+		[Parameter()]
+		[ValidateRange(1, 200)]
+		[int]$MaximumTweets = 200
 	)
 	process {
 		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/user_timeline.json'
-					
-		$AuthorizationString = Get-OAuthAuthorization -TweetMessage $Message -HttpEndPoint $HttpEndPoint
 		
-		$Body = "status=$Message"
-		Write-Verbose "Using POST body '$Body'"
+		$ApiParams = @{
+			#'include_rts' = @{ $true = 'true';$false = 'false' }[$IncludeRetweets -eq $true]
+			#'exclude_replies' = @{ $true = 'false'; $false = 'true' }[$IncludeReplies -eq $true]
+			'count' = $MaximumTweets
+			'screen_name' = $Username
+		}
+		$Body = 'screen_name=randafaith'
+		Write-Verbose "Using body '$Body'"
+		$AuthorizationString = Get-OAuthAuthorization -Api 'Timeline' -ApiParameters $ApiParams -HttpEndPoint $HttpEndPoint
 		Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
-		
-		
-		#$HttpEndPoint = "http://api.twitter.com/1.1/statuses/user_timeline.json?include_entities=true&include_rts=true&exclude_replies=true&count=20&screen_name=$user" #notworking
-		$AuthorizationString = Get-OAuthAuthorization -HttpEndPoint $HttpEndPoint -Verbose
-		Invoke-RestMethod -URI $HttpEndPoint -Method Get -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
-		$Timeline | Select Id, created_at, text, retweet_count, favorite_count
+		#$Timeline | Select Id, created_at, text, retweet_count, favorite_count
 	}
 }
