@@ -462,11 +462,16 @@ Function Split-Tweet {
 # Get-ShortURL
 # Function for the PowerShell MyTwitter module
 # The function gets a shortened URL for using when you need to embed web-links.
-# Date: 05/10/2014
-# Author: SqlChow
-# Version: 0.1
-# Changes: 
+# Date: 28/10/2014
+# Author: SqlChow, sstranger
+# Version: 0.2
+# Changes: Added support for the following url shortning services:
+#          is.gd, snurl, tr.im, bit.ly
+#          Inspiration from following blogpost: http://twitter.ulitzer.com/node/1009036
+#
 # ToDo: Maybe we need to export it. However, it can stay inside the module.
+#       Update Synopsis with examples
+#       Bitly part needs to check for http in url.
 ########################################################################################################################
 Function Get-ShortURL {
   <#
@@ -490,20 +495,80 @@ Function Get-ShortURL {
     [OutputType([string])]
     Param
     (
-        # Message you want to split
+        # The URL you want to split.
         [Parameter(
                    HelpMessage = 'The URL that needs shortening',
                    Mandatory = $true,
                    ValueFromPipelineByPropertyName = $false,
                    Position = 0)]
-        [string]$URL
+        [string]$URL,
+        [Parameter(Mandatory=$False)]
+		    [ValidateSet('TinyURL','Bitly','isgd','Trim')]
+		    [string]$provider='TinyURL',
+        [ValidateScript({$provider -eq 'bitly'})]
+        [string]$BitlyApiKey 
     )
 
     #code here
     $shortenedURL = $null;
-    $tinyUrlApiLink = "http://tinyurl.com/api-create.php?url=$URL";
-    $webClient = New-Object -TypeName System.Net.WebClient;
-    $shortenedURL = $webClient.DownloadString($tinyUrlApiLink).ToString();
+
+    switch ($provider.ToLower())
+    {
+      "tinyurl" {
+          $tinyUrlApiLink = "http://tinyurl.com/api-create.php?url=$URL";
+          $webClient = New-Object -TypeName System.Net.WebClient;
+          $shortenedURL = $webClient.DownloadString($tinyUrlApiLink).ToString();
+      }
+
+      "isgd" {
+          $isgdUrlApiLink = "http://is.gd/api.php?longurl=$URL";
+          $webClient = New-Object -TypeName System.Net.WebClient;
+          $shortenedURL = $webClient.DownloadString($isgdUrlApiLink).ToString();
+      }
+
+      "trim" {
+          $trimUrlApiLink = "http://api.tr.im/api/trim_url.xml?url=$URL";
+          $webClient = New-Object -TypeName System.Net.WebClient;
+          $shortenedURL = $webClient.DownloadString($trimUrlApiLink).ToString();
+      }
+
+      "bitly" {
+          Write-Verbose "Checking for Login and API Key"
+          if (!($BitlyApiKey -and $Login))
+          {
+              Write-Verbose "Missing Login and API key parameters. Trying Registry..."
+              $RegKey = 'HKCU:\Software\MyTwitter\Bitly'
+		          if (!(Test-Path -Path $RegKey)) {
+			          Write-Error "No Bitly configuration found in registry"
+		          } else {
+			          $Values = 'Login', 'BitlyAPIKey'
+			          $Output = @{ }
+			          foreach ($Value in $Values) {
+				          if ((Get-Item $RegKey).GetValue($Value)) {
+					          $Output.$Value = (Get-Item $RegKey).GetValue($Value)
+				          } else {
+					          $Output.$Value = ''
+				          }
+			          }
+                $Login = $Output.Login
+                $BitlyAPIKey = $Output.BitlyAPIKey
+            }
+
+          }
+          else
+          {
+              "Login and API key parameters entered"
+          }
+          Write-Verbose "`$Login = $Login `$BitlyAPIKey = $BitlyAPIKey"
+          $BitlyUrlApiLink = "http://api.bit.ly/v3/shorten?uri=$URL&format=txt&login=$Login&apiKey=$BitlyAPIKey";
+          Write-Verbose $BitlyUrlApiLink
+          $webClient = New-Object -TypeName System.Net.WebClient;
+          $shortenedURL = $webClient.DownloadString($BitlyUrlApiLink).ToString();
+      }
+
+    }
+
+    $login = $null;$BitlyAPIKey = $null
     return $shortenedURL;
 }
 
@@ -643,5 +708,55 @@ Function Get-TweetTimeline {
 		Write-Verbose "HTTP request URL is '$HttpRequestUrl'"
 		Invoke-RestMethod -URI $HttpRequestUrl -Method Get -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/json"
     
+	}
+}
+
+<#
+.Synopsis
+   Short description
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Example of how to use this cmdlet
+.EXAMPLE
+   Another example of how to use this cmdlet
+.LINK
+  https://bitly.com/a/settings/advanced
+#>
+function Set-BitlyAPI
+{
+    [CmdletBinding()]
+    Param
+    (
+        # BitLy Login
+        [Parameter(Mandatory=$true)]
+        [string]$Login,
+
+        # Bitly API Key 
+        [Parameter(Mandatory=$true)]
+        [string]$BitlyAPIKey,
+        [switch]$Force
+    )
+
+    begin {
+		$RegKey = 'HKCU:\Software\MyTwitter\Bitly'
+	}
+	process {
+		#Bitly Login and API key are provided by Bitly application
+		Write-Verbose "Checking registry to see if the Bitly Login and API Key  are already stored"
+		if (!(Test-Path -Path $RegKey)) {
+			Write-Verbose "No BitLy configuration found in registry. Creating one."
+			New-Item -Path ($RegKey | Split-Path -Parent) -Name ($RegKey | Split-Path -Leaf) | Out-Null
+		}
+		
+		$Values = 'Login', 'BitlyAPIKey'
+		foreach ($Value in $Values) {
+			if ((Get-Item $RegKey).GetValue($Value) -and !$Force.IsPresent) {
+				Write-Verbose "'$RegKey\$Value' already exists. Skipping."
+			} else {
+				Write-Verbose "Creating $RegKey\$Value"
+				New-ItemProperty $RegKey -Name $Value -Value ((Get-Variable $Value).Value) -Force | Out-Null
+			}
+		}
 	}
 }
