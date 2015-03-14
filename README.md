@@ -11,6 +11,8 @@ The MyTwitter Powershell module is a module created to interact with Twitter.  I
 10/08/14 - Added Pester test for Split-Tweet function. I would suggest we create more tests later.
 ![ScreenShot](https://raw.githubusercontent.com/MyTwitter/MyTwitter/master/PesterSplitTweet.gif)
 
+03/14/15 - Fixed Bitly Authentication within the Get-ShortUrl function.
+
 # Install
 To install the module including all source code you can just run in a PowerShell v3 or higher the following command:
 <pre>
