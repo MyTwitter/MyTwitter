@@ -474,7 +474,7 @@ Function Split-Tweet {
 #       Bitly part needs to check for http in url.
 ########################################################################################################################
 Function Get-ShortURL {
-  <#
+<#
   .SYNOPSIS
    This Function creats a shortened URL.
 
@@ -502,75 +502,105 @@ Function Get-ShortURL {
                    ValueFromPipelineByPropertyName = $false,
                    Position = 0)]
         [string]$URL,
-        [Parameter(Mandatory=$False)]
-		    [ValidateSet('TinyURL','Bitly','isgd','Trim')]
-		    [string]$provider='TinyURL',
-        [ValidateScript({$provider -eq 'bitly'})]
-        [string]$BitlyApiKey 
+        [Parameter(
+                    Mandatory=$False,
+                    ParameterSetName='Default')]
+		[ValidateSet('TinyURL','Bitly','isgd','Trim')]
+		[string]$provider='TinyURL'
     )
-
-    #code here
-    $shortenedURL = $null;
-
-    switch ($provider.ToLower())
-    {
-      "tinyurl" {
-          $tinyUrlApiLink = "http://tinyurl.com/api-create.php?url=$URL";
-          $webClient = New-Object -TypeName System.Net.WebClient;
-          $shortenedURL = $webClient.DownloadString($tinyUrlApiLink).ToString();
-      }
-
-      "isgd" {
-          $isgdUrlApiLink = "http://is.gd/api.php?longurl=$URL";
-          $webClient = New-Object -TypeName System.Net.WebClient;
-          $shortenedURL = $webClient.DownloadString($isgdUrlApiLink).ToString();
-      }
-
-      "trim" {
-          $trimUrlApiLink = "http://api.tr.im/api/trim_url.xml?url=$URL";
-          $webClient = New-Object -TypeName System.Net.WebClient;
-          $shortenedURL = $webClient.DownloadString($trimUrlApiLink).ToString();
-      }
-
-      "bitly" {
-          Write-Verbose "Checking for Login and API Key"
-          if (!($BitlyApiKey -and $Login))
-          {
-              Write-Verbose "Missing Login and API key parameters. Trying Registry..."
-              $RegKey = 'HKCU:\Software\MyTwitter\Bitly'
-		          if (!(Test-Path -Path $RegKey)) {
-			          Write-Error "No Bitly configuration found in registry"
-		          } else {
-			          $Values = 'Login', 'BitlyAPIKey'
-			          $Output = @{ }
-			          foreach ($Value in $Values) {
-				          if ((Get-Item $RegKey).GetValue($Value)) {
-					          $Output.$Value = (Get-Item $RegKey).GetValue($Value)
-				          } else {
-					          $Output.$Value = ''
-				          }
-			          }
-                $Login = $Output.Login
-                $BitlyAPIKey = $Output.BitlyAPIKey
-            }
-
-          }
-          else
-          {
-              "Login and API key parameters entered"
-          }
-          Write-Verbose "`$Login = $Login `$BitlyAPIKey = $BitlyAPIKey"
-          $BitlyUrlApiLink = "http://api.bit.ly/v3/shorten?uri=$URL&format=txt&login=$Login&apiKey=$BitlyAPIKey";
-          Write-Verbose $BitlyUrlApiLink
-          $webClient = New-Object -TypeName System.Net.WebClient;
-          $shortenedURL = $webClient.DownloadString($BitlyUrlApiLink).ToString();
-      }
-
+ 
+    DynamicParam {
+         if ($provider -eq 'Bitly') {
+              $bitlyAttribute = New-Object System.Management.Automation.ParameterAttribute
+                    $bitlyAttribute.Position = 3
+                    $bitlyAttribute.Mandatory = $false
+                    $bitlyAttribute.HelpMessage = 'Please enter your Bitly Generic Access Token:'
+                    $attributeCollection = New-Object System.Collections.ObjectModel.Collection[System.Attribute]
+                    $attributeCollection.Add($bitlyAttribute)
+                    $bitlyParam = New-Object System.Management.Automation.RuntimeDefinedParameter('BitlyAccessToken', [string], $attributeCollection)
+                    $paramDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+                    $paramDictionary.Add('BitlyAccessToken', $bitlyParam)
+                    return $paramDictionary
+        }
     }
+    
+    Process {
+        #code here
+        $shortenedURL = $null;
 
-    $login = $null;$BitlyAPIKey = $null
-    return $shortenedURL;
+        #Check if BitlyAccessToken is entered
+        $BitlyAccessToken = $PSBoundParameters['BitlyAccessToken']
+
+
+        switch ($provider.ToLower())
+        {
+          "tinyurl" {
+              $tinyUrlApiLink = "http://tinyurl.com/api-create.php?url=$URL";
+              $webClient = New-Object -TypeName System.Net.WebClient;
+              $shortenedURL = $webClient.DownloadString($tinyUrlApiLink).ToString();
+          }
+
+          "isgd" {
+              $isgdUrlApiLink = "http://is.gd/api.php?longurl=$URL";
+              $webClient = New-Object -TypeName System.Net.WebClient;
+              $shortenedURL = $webClient.DownloadString($isgdUrlApiLink).ToString();
+          }
+
+          "trim" {
+              $trimUrlApiLink = "http://api.tr.im/api/trim_url.xml?url=$URL";
+              $webClient = New-Object -TypeName System.Net.WebClient;
+              $shortenedURL = $webClient.DownloadString($trimUrlApiLink).ToString();
+          }
+
+          "bitly" {
+              Write-Verbose "Checking for Bitly Access Token"
+              if (!($BitlyAccessToken))
+              {
+                  Write-Verbose "Missing Bitly Access Token. Trying Registry..."
+                  $RegKey = 'HKCU:\Software\MyTwitter\Bitly'
+		              if (!(Test-Path -Path $RegKey)) {
+			              Write-Error "No Bitly Bitly Access Token found in registry. Run Set-BitlyAccesToken function"
+		              } else {
+			              $Values = 'BitlyAccessToken'
+			              $Output = @{ }
+			              foreach ($Value in $Values) {
+				              if ((Get-Item $RegKey).GetValue($Value)) {
+					              $Output.$Value = (Get-Item $RegKey).GetValue($Value)
+				              } else {
+					              $Output.$Value = ''
+				              }
+			              }
+                    $BitlyAccessToken = $Output.BitlyAccessToken
+                }
+
+              }
+              else
+              {
+                  'Bitly Access Token parameter entered'
+              }
+              Write-Verbose "`$BitlyAccessToken = $BitlyAccessToken"
+              #Check if http is present in url?
+              if(!($URL -like "http*")){$URL='http://' + $URL}
+              # Make the call
+                $BitlyURL=Invoke-WebRequest `
+                    -Uri https://api-ssl.bitly.com/v3/shorten `
+                    -Body @{access_token=$BitlyAccessToken;longURL=$URL} `
+                    -Method Get
+
+                #Get the elements from the returned JSON
+                $Bitlyjson = $BitlyURL.Content | convertfrom-json 
+
+                # Print out the shortened URL 
+                $shortenedURL = $Bitlyjson.data.url 
+          }
+
+        }
+
+        $BitlyAccessToken = $null
+        return $shortenedURL;
+    }
 }
+
 
 
 ########################################################################################################################
@@ -750,6 +780,54 @@ function Set-BitlyAPI
 		}
 		
 		$Values = 'Login', 'BitlyAPIKey'
+		foreach ($Value in $Values) {
+			if ((Get-Item $RegKey).GetValue($Value) -and !$Force.IsPresent) {
+				Write-Verbose "'$RegKey\$Value' already exists. Skipping."
+			} else {
+				Write-Verbose "Creating $RegKey\$Value"
+				New-ItemProperty $RegKey -Name $Value -Value ((Get-Variable $Value).Value) -Force | Out-Null
+			}
+		}
+	}
+}
+
+<#
+.Synopsis
+   Set Bitly Generic Access Token
+.DESCRIPTION
+   Set Bitly Generic Access Token and store it in your registry
+   To set this up: 
+   1. You must create an account at Bit.ly, and obtain an Generic Authorization token. 
+   2. Verify your Bit.ly account with an eMail that Bitly sends to your account. 
+   3. Obtain an authorization token at: https://bitly.com/a/oauth_apps
+.EXAMPLE
+   Set-Set-BitlyAuthorizationToken -BitlyAutToken "3d9b120e66badcdfc8f63b752634e9061abf25ce"
+.LINK
+  https://bitly.com/a/oauth_apps
+#>
+function Set-BitlyAccessToken
+{
+    [CmdletBinding()]
+    Param
+    (
+        # Bitly API Key 
+        [Parameter(Mandatory=$true)]
+        [string]$BitlyAccessToken,
+        [switch]$Force
+    )
+
+    begin {
+		$RegKey = 'HKCU:\Software\MyTwitter\Bitly'
+	}
+	process {
+		#Bitly Login and API key are provided by Bitly application
+		Write-Verbose "Checking registry to see if the Bitly Generic Authorization token is already stored"
+		if (!(Test-Path -Path $RegKey)) {
+			Write-Verbose "No BitLy configuration found in registry. Creating one."
+			New-Item -Path ($RegKey | Split-Path -Parent) -Name ($RegKey | Split-Path -Leaf) | Out-Null
+		}
+		
+		$Values = 'BitlyAccessToken'
 		foreach ($Value in $Values) {
 			if ((Get-Item $RegKey).GetValue($Value) -and !$Force.IsPresent) {
 				Write-Verbose "'$RegKey\$Value' already exists. Skipping."
