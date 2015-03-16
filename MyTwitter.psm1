@@ -234,7 +234,7 @@ Function Remove-MyTwitterConfiguration {
 	}
 }
 
-function Escape-SpecialCharacters
+function Add-SpecialCharacters
 {
 	[CmdletBinding()]
 	[OutputType([System.String])]
@@ -281,7 +281,7 @@ function Send-Tweet {
 		$HttpEndPoint = 'https://api.twitter.com/1.1/statuses/update.json'
 		
 		####Added following line/function to properly escape !,*,(,) special characters
-		$Message = $(Escape-SpecialCharacters -Message $Message)
+		$Message = $(Add-SpecialCharacters -Message $Message)
 		$AuthorizationString = Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
 		
 		$Body = "status=$Message"
@@ -838,3 +838,15 @@ function Set-BitlyAccessToken
 		}
 	}
 }
+
+Export-ModuleMember -Function @( 'Get-OAuthAuthorization',
+    'New-MyTwitterConfiguration',
+    'Get-MyTwitterConfiguration',
+    'Remove-MyTwitterConfiguration',
+    'Send-Tweet',
+    'Send-TwitterDm',
+    'Split-Tweet',
+    'Get-ShortURL',
+    'Resize-Tweet',
+    'Get-TweetTimeline',
+    'Set-BitlyAccessToken')
