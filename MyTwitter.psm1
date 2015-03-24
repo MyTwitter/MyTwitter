@@ -76,7 +76,7 @@ function Get-OAuthAuthorization {
 			Write-Verbose "Generated Oauth none string '$OauthNonce'"
 			
 			## Find the total seconds since 1/1/1970 (epoch time)
-			$EpochTimeNow = [System.DateTime]::UtcNow - [System.DateTime]::ParseExact("01/01/1970", "dd/MM/yyyy", $null)
+			$EpochTimeNow = [System.DateTime]::UtcNow - [System.DateTime]::ParseExact("01/01/1970", "dd/MM/yyyy", [System.Globalization.CultureInfo]::InvariantCulture)
 			Write-Verbose "Generated epoch time '$EpochTimeNow'"
 			$OauthTimestamp = [System.Convert]::ToInt64($EpochTimeNow.TotalSeconds).ToString();
 			Write-Verbose "Generated Oauth timestamp '$OauthTimestamp'"
