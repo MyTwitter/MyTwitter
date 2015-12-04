@@ -1,4 +1,6 @@
 # MyTwitter Powershell Module
+
+[![Join the chat at https://gitter.im/MyTwitter/MyTwitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MyTwitter/MyTwitter?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 - - -
 The MyTwitter Powershell module is a module created to interact with Twitter.  It uses Twitter's OAuth API to tweet, send direct messages and hopefully more functionality is to come!
 
