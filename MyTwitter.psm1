@@ -17,7 +17,7 @@
 #>
 
 function Get-OAuthAuthorization {
-    <#
+	<#
 	.SYNOPSIS
 		This function is used to create the signature and authorization headers needed to pass to OAuth
 		It has been tested with v1.1 of the API.
@@ -40,7 +40,7 @@ function Get-OAuthAuthorization {
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
 		[Parameter(Mandatory)]
-		[ValidateSet('Timeline','DirectMessage','Update')]
+		[ValidateSet('Timeline', 'DirectMessage', 'Update')]
 		[string]$Api,
 		[Parameter(Mandatory)]
 		[string]$HttpEndPoint,
@@ -84,12 +84,12 @@ function Get-OAuthAuthorization {
 			## Build the signature
 			$SignatureBase = "$([System.Uri]::EscapeDataString($HttpEndPoint))&"
 			$SignatureParams = @{
-				'oauth_consumer_key' = $MyTwitterConfiguration.ApiKey;
-				'oauth_nonce' = $OauthNonce;
+				'oauth_consumer_key'     = $MyTwitterConfiguration.ApiKey;
+				'oauth_nonce'            = $OauthNonce;
 				'oauth_signature_method' = 'HMAC-SHA1';
-				'oauth_timestamp' = $OauthTimestamp;
-				'oauth_token' = $MyTwitterConfiguration.AccessToken;
-				'oauth_version' = '1.0';
+				'oauth_timestamp'        = $OauthTimestamp;
+				'oauth_token'            = $MyTwitterConfiguration.AccessToken;
+				'oauth_version'          = '1.0';
 			}
 			
 			$AuthorizationParams = $SignatureParams.Clone()
@@ -140,22 +140,22 @@ Function New-MyTwitterConfiguration {
 		This example will create 4 registry values (APIKey,APISecret,AccessToken and AccessTokenSecret) in the
 		MyTwitter registry key with the observed values.
 	#>
-    [CmdletBinding()]
-      param (
-        [Parameter(Mandatory,
-          HelpMessage='What is the Twitter Client API Key?')]
-        [string]$APIKey,
-        [Parameter(Mandatory,
-          HelpMessage='What is the Twitter Client API Secret?')]
-        [string]$APISecret,
-        [Parameter(Mandatory,
-          HelpMessage='What is the Twitter Client Access Token?')]
-        [string]$AccessToken,
-        [Parameter(Mandatory,
-          HelpMessage='What is the Twitter Client Access Token Secret?')]
+	[CmdletBinding()]
+	param (
+		[Parameter(Mandatory,
+			HelpMessage='What is the Twitter Client API Key?')]
+		[string]$APIKey,
+		[Parameter(Mandatory,
+			HelpMessage='What is the Twitter Client API Secret?')]
+		[string]$APISecret,
+		[Parameter(Mandatory,
+			HelpMessage='What is the Twitter Client Access Token?')]
+		[string]$AccessToken,
+		[Parameter(Mandatory,
+			HelpMessage='What is the Twitter Client Access Token Secret?')]
 		[string]$AccessTokenSecret,
 		[switch]$Force
-      )
+	)
 	begin {
 		$RegKey = 'HKCU:\Software\MyTwitter'
 	}
@@ -234,8 +234,7 @@ Function Remove-MyTwitterConfiguration {
 	}
 }
 
-function Add-SpecialCharacters
-{
+function Add-SpecialCharacters {
 	[CmdletBinding()]
 	[OutputType([System.String])]
 	param (
@@ -243,17 +242,13 @@ function Add-SpecialCharacters
 		[ValidateLength(1, 140)]
 		[string] $Message
 	)
-	try
-	{
+	try {
 		[string[]] $specialChar = @("!", "*", "'", "(", ")")
-		for ($i = 0; $i -lt $specialChar.Length; $i++)
-		{
+		for ($i = 0; $i -lt $specialChar.Length; $i++) {
 			$Message = $Message.Replace($specialChar[$i], [System.Uri]::HexEscape($specialChar[$i]))
 		}
 		return $Message
-	}
-	catch
-	{
+	} catch {
 		Write-Error $_.Exception.Message
 	}
 }
@@ -272,7 +267,7 @@ function Send-Tweet {
 	[CmdletBinding()]
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
-		[Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+		[Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
 		[ValidateLength(1, 140)]
 		[string]$Message
 	)
@@ -331,398 +326,377 @@ function Send-TwitterDm {
 	}
 }
 
-########################################################################################################################
-# Split-Tweet
-# Function for the PowerShell MyTwitter module
-# Twitter has a max tweet message length of 140 characters and you may sometimes want to split a message into smaller
-# separate tweets to comply to 140 character limit.
-# Date: 05/10/2014
-# Author; Stefan Stranger
-# Version: 0.4
-# Changes: 
-#		(0.2) = split at word boundaries, removed parameter postfix, removed
-#		(0.3) = Return a string object with more properties, like length etc.
-#		(0.4) = removed Length parameter. The function will will decide on the size of the tweet.
-# ToDo: Only split on complete words. << added @sqlchow
-#       Make pipeline aware
-#       Return a string object with more properties, like length etc. << added @sstranger
-########################################################################################################################
 Function Split-Tweet {
-  <#
-  .SYNOPSIS
-   This Function splits a Twitter message that exceed the maximum length of 140 characters.
-  .DESCRIPTION
-   This Function splits a Twitter message that exceed the maximum length of 140 characters.
-  .EXAMPLE
-   $Message = "This is a very long message that needs to be split because it's too long for the max twitter characters. Hope you like my new split-tweet function."
-   Split-Tweet -Message $Message
-   Message                                                                                                          Length
-   -------                                                                                                          ------
-   This is a very long message that needs to be split...                                                                134
-   split-tweet function. [2\2]                                                                                          27
+	<#
+	.SYNOPSIS
+   		This Function splits a Twitter message that exceed the maximum length of 140 characters.
+  	.DESCRIPTION
+   		This Function splits a Twitter message that exceed the maximum length of 140 characters.
+	.EXAMPLE
+		$Message = "This is a very long message that needs to be split because it's too long for the max twitter characters. Hope you like my new split-tweet function."
+		Split-Tweet -Message $Message
+		Message                                                                                                          Length
+		-------                                                                                                          ------
+		This is a very long message that needs to be split...                                                                134
+		split-tweet function. [2\2]                                                                                          27
 
-   .EXAMPLE
-   $Message = "This is a very long message that needs to be split because it's too long for the max twitter characters. Hope you like my new split-tweet function."
-   Split-Tweet -Message $Message | Select-Object @{L="Message";E={$_}} | % {Send-Tweet -Message $_.Message}
-   Splits a message into seperate messages and pipes the result to the Send-Tweet Function.
+	.EXAMPLE
+		$Message = "This is a very long message that needs to be split because it's too long for the max twitter characters. Hope you like my new split-tweet function."
+		Split-Tweet -Message $Message | Select-Object @{L="Message";E={$_}} | % {Send-Tweet -Message $_.Message}
+		Splits a message into seperate messages and pipes the result to the Send-Tweet Function.
+	.NOTES
+		Twitter has a max tweet message length of 140 characters and you may sometimes want to split a message into smaller
+		separate tweets to comply to 140 character limit.
+		Date: 05/10/2014
+		Author; Stefan Stranger
+		Version: 0.4
+		Changes: 
+				(0.2) = split at word boundaries, removed parameter postfix, removed
+				(0.3) = Return a string object with more properties, like length etc.
+				(0.4) = removed Length parameter. The function will will decide on the size of the tweet.
+		ToDo: Only split on complete words. << added @sqlchow
+		      Make pipeline aware
+		      Return a string object with more properties, like length etc. << added @sstranger
   #>
 
 	[CmdletBinding()]
-    [Alias()]
-    [OutputType([string])]
-    Param
-    (
-        # Message you want to split
-        [Parameter(
-                   HelpMessage = 'What is the message you want to split?',
-                   Mandatory = $true,
-                   Valuefrompipeline=$true,
-                   Position = 0)]
-        [string]$Message
-    )
+	[Alias()]
+	[OutputType([string])]
+	Param
+	(
+		# Message you want to split
+		[Parameter(
+			HelpMessage = 'What is the message you want to split?',
+			Mandatory = $true,
+			Valuefrompipeline=$true,
+			Position = 0)]
+		[string]$Message
+	)
 
-  [int]$Length = 130
-  #Check length of Tweet
-  if ($Message.length -gt $Length)
-  {
-    Write-Verbose 'Message needs to be split'
-    #Total length of message
-    Write-Verbose "Length of message is $($message.length)"
-    #Calculate number message
-    Write-Verbose "Split message in $(($message.Length)/$Length) times"
-    #Create an array
-    $numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
-    Write-Verbose "`$numberofmsgs: $numberofmsgs"
-    $counter = 0 
-    $result = @()
+	[int]$Length = 130
+	#Check length of Tweet
+	if ($Message.length -gt $Length) {
+		Write-Verbose 'Message needs to be split'
+		#Total length of message
+		Write-Verbose "Length of message is $($message.length)"
+		#Calculate number message
+		Write-Verbose "Split message in $(($message.Length)/$Length) times"
+		#Create an array
+		$numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length))
+		Write-Verbose "`$numberofmsgs: $numberofmsgs"
+		$counter = 0 
+		$result = @()
 
-    #extract all the words for splitting the stream
-    $wordCollection = [Regex]::Split($Message, '((?ins)(\w+))');
-    $collectionCount = $wordCollection.Count
-    Write-Verbose "number of words in message: $collectionCount"
+		#extract all the words for splitting the stream
+		$wordCollection = [Regex]::Split($Message, '((?ins)(\w+))');
+		$collectionCount = $wordCollection.Count
+		Write-Verbose "number of words in message: $collectionCount"
 
-    #add auto-post fix like [1\n]
-	$Postfix = '['+'1\'+ $numberofmsgs.ToString() +']'
-	Write-Verbose "`$Postfix length: $($Postfix.Length)"
+		#add auto-post fix like [1\n]
+		$Postfix = '['+'1\'+ $numberofmsgs.ToString() +']'
+		Write-Verbose "`$Postfix length: $($Postfix.Length)"
 
-	#if people tweet something that is greater than 1400 chars
-	#we may need to account for that.
-	$Length = $Length - $($Postfix.Length) + 2
-	$numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length)) 
+		#if people tweet something that is greater than 1400 chars
+		#we may need to account for that.
+		$Length = $Length - $($Postfix.Length) + 2
+		$numberofmsgs = [math]::Ceiling($(($Message.Length)/$Length)) 
     
-    #word iterator and message container
-    $wordIterator = 0
-    $tempMessage=""
+		#word iterator and message container
+		$wordIterator = 0
+		$tempMessage=""
 
-    while($wordIterator -lt $collectionCount) 
-    {
-        #May not be a good way of doing this but, works for now.
-        $tempMsgLength = $tempMessage.Length
-        $currentWordLength = $wordCollection[$wordIterator].Length
-        $postFixLength = $Postfix.Length
+		while($wordIterator -lt $collectionCount) {
+			#May not be a good way of doing this but, works for now.
+			$tempMsgLength = $tempMessage.Length
+			$currentWordLength = $wordCollection[$wordIterator].Length
+			$postFixLength = $Postfix.Length
         
 
-	    While((($tempMsgLength + $currentWordLength + $postFixLength) -lt $Length) -and ($wordIterator -lt $collectionCount))
-	    {
-		    $tempMessage = $tempMessage + $wordCollection[$wordIterator]
+			While((($tempMsgLength + $currentWordLength + $postFixLength) -lt $Length) -and ($wordIterator -lt $collectionCount)) {
+				$tempMessage = $tempMessage + $wordCollection[$wordIterator]
             
-            #housekeeping
-            $tempMsgLength = $tempMessage.Length
-            $currentWordLength = $wordCollection[$wordIterator].Length
-		    $wordIterator += 1
+				#housekeeping
+				$tempMsgLength = $tempMessage.Length
+				$currentWordLength = $wordCollection[$wordIterator].Length
+				$wordIterator += 1
     
-	    }
+			}
 
-        #if the parameter is not specified only then update the default postfix.
-        #not needed any more if(-not $PSBoundParameters.ContainsKey('Postfix')){}
-		$counter +=1;
-		$Postfix = '[' + "$counter" + '\' + $numberofmsgs.ToString() + ']'
+			#if the parameter is not specified only then update the default postfix.
+			#not needed any more if(-not $PSBoundParameters.ContainsKey('Postfix')){}
+			$counter +=1;
+			$Postfix = '[' + "$counter" + '\' + $numberofmsgs.ToString() + ']'
 
-        #passing message to result array
-        #Creating a msg object with message and length property
-        $msgobject = [pscustomobject]@{
-            Message= $tempMessage + " $Postfix"
-            Length = ($tempMessage + " $Postfix").Length
-            }
+			#passing message to result array
+			#Creating a msg object with message and length property
+			$msgobject = [pscustomobject]@{
+				Message = $tempMessage + " $Postfix"
+				Length  = ($tempMessage + " $Postfix").Length
+			}
 
-        $result += $msgobject
+			$result += $msgobject
 
-        Write-Verbose "Message: $tempMessage $Postfix" 
-        $tempMessage = ""
-    }
-  }
-  else
-  {
-    Write-Verbose 'No need to split tweet'
-  }
-  return $result
+			Write-Verbose "Message: $tempMessage $Postfix" 
+			$tempMessage = ""
+		}
+	} else {
+		Write-Verbose 'No need to split tweet'
+	}
+	return $result
 }
 
-########################################################################################################################
-# Get-ShortURL
-# Function for the PowerShell MyTwitter module
-# The function gets a shortened URL for using when you need to embed web-links.
-# Date: 28/10/2014
-# Author: SqlChow, sstranger
-# Version: 0.2
-# Changes: Added support for the following url shortning services:
-#          is.gd, snurl, tr.im, bit.ly
-#          Inspiration from following blogpost: http://twitter.ulitzer.com/node/1009036
-#
-# ToDo: Maybe we need to export it. However, it can stay inside the module.
-#       Update Synopsis with examples
-#       Bitly part needs to check for http in url.
-########################################################################################################################
 Function Get-ShortURL {
-<#
-  .SYNOPSIS
-   This Function creats a shortened URL.
+	<#
+  	.SYNOPSIS
+		This Function creats a shortened URL.
 
-  .DESCRIPTION
-   This Function creats a shortened URL using the tinyURL service. The function is based on
-   a powertip on http://powershell.com/cs/blogs/tips/archive/2014/09/25/creating-tinyurls.aspx
+	.DESCRIPTION
+		This Function creats a shortened URL using the tinyURL service. The function is based on
+		a powertip on http://powershell.com/cs/blogs/tips/archive/2014/09/25/creating-tinyurls.aspx
 
-  .EXAMPLE
-   Get-ShortURL -URL "https://raw.githubusercontent.com/stefanstranger/MyTwitter/master/MyTwitter.psm1"
-   http://tinyurl.com/k8tktsk
+	.EXAMPLE
+		Get-ShortURL -URL "https://raw.githubusercontent.com/stefanstranger/MyTwitter/master/MyTwitter.psm1"
+		http://tinyurl.com/k8tktsk
 
-  .LINK
-    http://powershell.com/cs/blogs/tips/archive/2014/09/25/creating-tinyurls.aspx
-  #>
-
-    [CmdletBinding()]
-    [Alias()]
-    [OutputType([string])]
-    Param
-    (
-        # The URL you want to split.
-        [Parameter(
-                   HelpMessage = 'The URL that needs shortening',
-                   Mandatory = $true,
-                   ValueFromPipelineByPropertyName = $false,
-                   Position = 0)]
-        [string]$URL,
-        [Parameter(
-                    Mandatory=$False,
-                    ParameterSetName='Default')]
-		[ValidateSet('TinyURL','Bitly','isgd','Trim')]
-		[string]$provider='TinyURL'
-    )
- 
-    DynamicParam {
-         if ($provider -eq 'Bitly') {
-              $bitlyAttribute = New-Object System.Management.Automation.ParameterAttribute
-                    $bitlyAttribute.Position = 3
-                    $bitlyAttribute.Mandatory = $false
-                    $bitlyAttribute.HelpMessage = 'Please enter your Bitly Generic Access Token:'
-                    $attributeCollection = New-Object System.Collections.ObjectModel.Collection[System.Attribute]
-                    $attributeCollection.Add($bitlyAttribute)
-                    $bitlyParam = New-Object System.Management.Automation.RuntimeDefinedParameter('BitlyAccessToken', [string], $attributeCollection)
-                    $paramDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-                    $paramDictionary.Add('BitlyAccessToken', $bitlyParam)
-                    return $paramDictionary
-        }
-    }
-    
-    Process {
-        #code here
-        $shortenedURL = $null;
-
-        #Check if BitlyAccessToken is entered
-        $BitlyAccessToken = $PSBoundParameters['BitlyAccessToken']
-
-
-        switch ($provider.ToLower())
-        {
-          "tinyurl" {
-              $tinyUrlApiLink = "http://tinyurl.com/api-create.php?url=$URL";
-              $webClient = New-Object -TypeName System.Net.WebClient;
-              $shortenedURL = $webClient.DownloadString($tinyUrlApiLink).ToString();
-          }
-
-          "isgd" {
-              $isgdUrlApiLink = "http://is.gd/api.php?longurl=$URL";
-              $webClient = New-Object -TypeName System.Net.WebClient;
-              $shortenedURL = $webClient.DownloadString($isgdUrlApiLink).ToString();
-          }
-
-          "trim" {
-              $trimUrlApiLink = "http://api.tr.im/api/trim_url.xml?url=$URL";
-              $webClient = New-Object -TypeName System.Net.WebClient;
-              $shortenedURL = $webClient.DownloadString($trimUrlApiLink).ToString();
-          }
-
-          "bitly" {
-              Write-Verbose "Checking for Bitly Access Token"
-              if (!($BitlyAccessToken))
-              {
-                  Write-Verbose "Missing Bitly Access Token. Trying Registry..."
-                  $RegKey = 'HKCU:\Software\MyTwitter\Bitly'
-		              if (!(Test-Path -Path $RegKey)) {
-			              Write-Error "No Bitly Bitly Access Token found in registry. Run Set-BitlyAccesToken function"
-		              } else {
-			              $Values = 'BitlyAccessToken'
-			              $Output = @{ }
-			              foreach ($Value in $Values) {
-				              if ((Get-Item $RegKey).GetValue($Value)) {
-					              $Output.$Value = (Get-Item $RegKey).GetValue($Value)
-				              } else {
-					              $Output.$Value = ''
-				              }
-			              }
-                    $BitlyAccessToken = $Output.BitlyAccessToken
-                }
-
-              }
-              else
-              {
-                  'Bitly Access Token parameter entered'
-              }
-              Write-Verbose "`$BitlyAccessToken = $BitlyAccessToken"
-              #Check if http is present in url?
-              if(!($URL -like "http*")){$URL='http://' + $URL}
-              # Make the call
-                $BitlyURL=Invoke-WebRequest `
-                    -Uri https://api-ssl.bitly.com/v3/shorten `
-                    -Body @{access_token=$BitlyAccessToken;longURL=$URL} `
-                    -Method Get
-
-                #Get the elements from the returned JSON
-                $Bitlyjson = $BitlyURL.Content | convertfrom-json 
-
-                # Print out the shortened URL 
-                $shortenedURL = $Bitlyjson.data.url 
-          }
-
-        }
-
-        $BitlyAccessToken = $null
-        return $shortenedURL;
-    }
-}
-
-
-
-########################################################################################################################
-# Resize-Tweet
-# Function for the PowerShell MyTwitter module
-# You sometimes want to replace words in your tweet to comply to max tweet length of 140 characters
-# Date: 09/10/2014
-# Author; Stefan Stranger
-# Version: 0.2
-# Changes: 
-#		(0.1) = initial version
-#   (0.2) = renamed function from Shorten-Tweet to Resize-Tweet
-# ToDo: - speed up performance. .Net class is faster but does not do case insensitive replace.
-########################################################################################################################
-Function Resize-Tweet {
-  <#
-  .SYNOPSIS
-   This Function shortens Twitter messages for words stored in a hashtable.
-  .DESCRIPTION
-   This Function shortens Twitter messages for words stored in a hashtable so that you may stay within the Twitter message
-   limit of 140 characters.
-  .EXAMPLE
-   $Message = "This is an example tweet for testing purposes. And here are some words to replace: two, and, One, at, too"
-   Resize-Tweet -Message $Message
-   c:\
-   This is an example tweet 4 testing purposes. & here are some word to replace: 2, &, 1, @, 2                              
+	.LINK
+		http://powershell.com/cs/blogs/tips/archive/2014/09/25/creating-tinyurls.aspx
+	.NOTES
+		Date: 28/10/2014
+		Author: SqlChow, sstranger
+		Version: 0.2
+		Changes: Added support for the following url shortning services:
+		         is.gd, snurl, tr.im, bit.ly
+		         Inspiration from following blogpost: http://twitter.ulitzer.com/node/1009036
+		
+		ToDo: Maybe we need to export it. However, it can stay inside the module.
+		      Update Synopsis with examples
+		      Bitly part needs to check for http in url.
   #>
 
 	[CmdletBinding()]
-    [Alias()]
-    [OutputType([string])]
-    Param
-    (
-        # Message you want to split
-        [Parameter(
-                   HelpMessage = 'What is the message you want to shorten?',
-                   Mandatory = $true,
-                   Valuefrompipeline=$true,
-                   Position = 0)]
-        [string]$Message
-    )
+	[Alias()]
+	[OutputType([string])]
+	Param
+	(
+		# The URL you want to split.
+		[Parameter(
+			HelpMessage = 'The URL that needs shortening',
+			Mandatory = $true,
+			ValueFromPipelineByPropertyName = $false,
+			Position = 0)]
+		[string]$URL,
+		[Parameter(
+			Mandatory=$False,
+			ParameterSetName='Default')]
+		[ValidateSet('TinyURL', 'Bitly', 'isgd', 'Trim')]
+		[string]$provider='TinyURL'
+	)
+ 
+	DynamicParam {
+		if ($provider -eq 'Bitly') {
+			$bitlyAttribute = New-Object System.Management.Automation.ParameterAttribute
+			$bitlyAttribute.Position = 3
+			$bitlyAttribute.Mandatory = $false
+			$bitlyAttribute.HelpMessage = 'Please enter your Bitly Generic Access Token:'
+			$attributeCollection = New-Object System.Collections.ObjectModel.Collection[System.Attribute]
+			$attributeCollection.Add($bitlyAttribute)
+			$bitlyParam = New-Object System.Management.Automation.RuntimeDefinedParameter('BitlyAccessToken', [string], $attributeCollection)
+			$paramDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+			$paramDictionary.Add('BitlyAccessToken', $bitlyParam)
+			return $paramDictionary
+		}
+	}
+    
+	Process {
+		#code here
+		$shortenedURL = $null;
 
-    #Hashtable containing search and replace options
-    $replacehash = [ordered]@{
-      'two' = '2';
-      'and' ='&';
-      'one' = '1';
-      'at' = '@';
-      'too' = '2';
-      'to' = '2';
-      'wait' = 'w8';
-      'enjoy' = 'njoy';
-      'please' = 'plz';
-      'thanks' = 'thx';
-      'for' = '4';
-      'you' = 'u';
-      'people' = 'ppl';
-      'okay' = 'K';
-      'ok' = 'K'
-    }
+		#Check if BitlyAccessToken is entered
+		$BitlyAccessToken = $PSBoundParameters['BitlyAccessToken']
+
+
+		switch ($provider.ToLower()) {
+			"tinyurl" {
+				$tinyUrlApiLink = "http://tinyurl.com/api-create.php?url=$URL";
+				$webClient = New-Object -TypeName System.Net.WebClient;
+				$shortenedURL = $webClient.DownloadString($tinyUrlApiLink).ToString();
+			}
+
+			"isgd" {
+				$isgdUrlApiLink = "http://is.gd/api.php?longurl=$URL";
+				$webClient = New-Object -TypeName System.Net.WebClient;
+				$shortenedURL = $webClient.DownloadString($isgdUrlApiLink).ToString();
+			}
+
+			"trim" {
+				$trimUrlApiLink = "http://api.tr.im/api/trim_url.xml?url=$URL";
+				$webClient = New-Object -TypeName System.Net.WebClient;
+				$shortenedURL = $webClient.DownloadString($trimUrlApiLink).ToString();
+			}
+
+			"bitly" {
+				Write-Verbose "Checking for Bitly Access Token"
+				if (!($BitlyAccessToken)) {
+					Write-Verbose "Missing Bitly Access Token. Trying Registry..."
+					$RegKey = 'HKCU:\Software\MyTwitter\Bitly'
+					if (!(Test-Path -Path $RegKey)) {
+						Write-Error "No Bitly Bitly Access Token found in registry. Run Set-BitlyAccesToken function"
+					} else {
+						$Values = 'BitlyAccessToken'
+						$Output = @{ }
+						foreach ($Value in $Values) {
+							if ((Get-Item $RegKey).GetValue($Value)) {
+								$Output.$Value = (Get-Item $RegKey).GetValue($Value)
+							} else {
+								$Output.$Value = ''
+							}
+						}
+						$BitlyAccessToken = $Output.BitlyAccessToken
+					}
+
+				} else {
+					'Bitly Access Token parameter entered'
+				}
+				Write-Verbose "`$BitlyAccessToken = $BitlyAccessToken"
+				#Check if http is present in url?
+				if(!($URL -like "http*")){$URL='http://' + $URL}
+				# Make the call
+				$BitlyURL=Invoke-WebRequest `
+					-Uri https://api-ssl.bitly.com/v3/shorten `
+					-Body @{access_token=$BitlyAccessToken; longURL=$URL} `
+					-Method Get
+
+				#Get the elements from the returned JSON
+				$Bitlyjson = $BitlyURL.Content | convertfrom-json 
+
+				# Print out the shortened URL 
+				$shortenedURL = $Bitlyjson.data.url 
+			}
+
+		}
+
+		$BitlyAccessToken = $null
+		return $shortenedURL;
+	}
+}
+
+Function Resize-Tweet {
+	<#
+	.SYNOPSIS
+		This Function shortens Twitter messages for words stored in a hashtable.
+	.DESCRIPTION
+		This Function shortens Twitter messages for words stored in a hashtable so that you may stay within the Twitter message
+		limit of 140 characters.
+	.EXAMPLE
+		$Message = "This is an example tweet for testing purposes. And here are some words to replace: two, and, One, at, too"
+		Resize-Tweet -Message $Message
+		c:\
+		This is an example tweet 4 testing purposes. & here are some word to replace: 2, &, 1, @, 2
+	.NOTES
+		You sometimes want to replace words in your tweet to comply to max tweet length of 140 characters
+		Date: 09/10/2014
+		Author; Stefan Stranger
+		Version: 0.2
+		Changes: 
+			(0.1) = initial version
+		  	(0.2) = renamed function from Shorten-Tweet to Resize-Tweet
+		ToDo: - speed up performance. .Net class is faster but does not do case insensitive replace.
+	#>
+
+	[CmdletBinding()]
+	[Alias()]
+	[OutputType([string])]
+	Param
+	(
+		# Message you want to split
+		[Parameter(
+			HelpMessage = 'What is the message you want to shorten?',
+			Mandatory = $true,
+			Valuefrompipeline=$true,
+			Position = 0)]
+		[string]$Message
+	)
+
+	#Hashtable containing search and replace options
+	$replacehash = [ordered]@{
+		'two'    = '2';
+		'and'    ='&';
+		'one'    = '1';
+		'at'     = '@';
+		'too'    = '2';
+		'to'     = '2';
+		'wait'   = 'w8';
+		'enjoy'  = 'njoy';
+		'please' = 'plz';
+		'thanks' = 'thx';
+		'for'    = '4';
+		'you'    = 'u';
+		'people' = 'ppl';
+		'okay'   = 'K';
+		'ok'     = 'K'
+	}
 
 
 
-    Write-Verbose "Current length of message: $($message.Length)"
+	Write-Verbose "Current length of message: $($message.Length)"
 
-    foreach ($h in $replacehash.GetEnumerator()) {
-      $Pattern = $h.Name
-      $New = $h.Value
-      #$strReplace = [regex]::replace($message, $pattern, $New) #remove because of not being case insensitive
-      Write-Verbose "We will now replace $Pattern with $New :" 
-      $strReplace = $Message -replace $h.Name, $h.Value
-      $Message = $strReplace
+	foreach ($h in $replacehash.GetEnumerator()) {
+		$Pattern = $h.Name
+		$New = $h.Value
+		#$strReplace = [regex]::replace($message, $pattern, $New) #remove because of not being case insensitive
+		Write-Verbose "We will now replace $Pattern with $New :" 
+		$strReplace = $Message -replace $h.Name, $h.Value
+		$Message = $strReplace
 
-    }
+	}
 
-    Write-Verbose "New length of message: $($message.Length)"
-    #Creating a msg object with message and length property
-    $msgobject = [pscustomobject]@{
-        Message= $Message
-        Length = $Message.Length
-        }
+	Write-Verbose "New length of message: $($message.Length)"
+	#Creating a msg object with message and length property
+	$msgobject = [pscustomobject]@{
+		Message = $Message
+		Length  = $Message.Length
+	}
 
-    $result += $msgobject
+	$result += $msgobject
 
-    $result
+	$result
 	
 	
 }
 
 Function Get-TweetTimeline {
-<#
-  .SYNOPSIS
-   This Function retrieves the Timeline of a Twitter user.
-  .DESCRIPTION
-   This Function retrieves the Timeline of a Twitter user.
-  .EXAMPLE
-   $TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 10
-   $TimeLine | Out-Gridview -PassThru
-   
-   This example stores the retrieved Twitter timeline for user sstranger with a maximum of 10 tweets and pipes the result
-   to the Out-GridView cmdlet.
-   .EXAMPLE
-   $TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 100
-   $TimeLine | Sort-Object -Descending | Out-Gridview -PassThru
-   
-   This example stores the retrieved Twitter timeline for user sstranger with a maximum of 100 tweets,
-   sorts the result descending on retweet counts and pipes the result to the Out-GridView cmdlet.
+	<#
+  	.SYNOPSIS
+		This Function retrieves the Timeline of a Twitter user.
+	.DESCRIPTION
+		This Function retrieves the Timeline of a Twitter user.
+	.EXAMPLE
+		$TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 10
+		$TimeLine | Out-Gridview -PassThru
+		
+		This example stores the retrieved Twitter timeline for user sstranger with a maximum of 10 tweets and pipes the result
+		to the Out-GridView cmdlet.
+	.EXAMPLE
+		$TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 100
+		$TimeLine | Sort-Object -Descending | Out-Gridview -PassThru
+		
+		This example stores the retrieved Twitter timeline for user sstranger with a maximum of 100 tweets,
+		sorts the result descending on retweet counts and pipes the result to the Out-GridView cmdlet.
 
-   .EXAMPLE
-   $TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 200
-   $TimeLine += Get-TweetTimeline -UserName "sstranger" -FromId ($TimeLine[-1].id -MaximumTweets) -MaximumTweets 100
-   
-   This example stores the retrieved Twitter timeline for user sstranger with the maximum allowed 200 tweets
-   per single request, then makes a second query for the next 100 tweets starting from the last retrieved tweet Id.
+	.EXAMPLE
+		$TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 200
+		$TimeLine += Get-TweetTimeline -UserName "sstranger" -FromId ($TimeLine[-1].id -MaximumTweets) -MaximumTweets 100
+		
+		This example stores the retrieved Twitter timeline for user sstranger with the maximum allowed 200 tweets
+		per single request, then makes a second query for the next 100 tweets starting from the last retrieved tweet Id.
 
-   .EXAMPLE
-   $TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 200
-   $TimeLine += Get-TweetTimeline -UserName "sstranger" -SinceId ($TimeLine[0].id -MaximumTweets) -MaximumTweets 100
-   
-   This example stores the retrieved Twitter timeline for user sstranger with the maximum allowed 200 tweets
-   per single request, then makes a second query for the newest tweets since the last tweet.
-#>
+	.EXAMPLE
+		$TimeLine = Get-TweetTimeline -UserName "sstranger" -MaximumTweets 200
+		$TimeLine += Get-TweetTimeline -UserName "sstranger" -SinceId ($TimeLine[0].id -MaximumTweets) -MaximumTweets 100
+		
+		This example stores the retrieved Twitter timeline for user sstranger with the maximum allowed 200 tweets
+		per single request, then makes a second query for the newest tweets since the last tweet.
+	#>
 	[CmdletBinding()]
 	[OutputType('System.Management.Automation.PSCustomObject')]
 	param (
@@ -743,19 +717,20 @@ Function Get-TweetTimeline {
 	process {
 		$HttpEndPoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
 		$ApiParams = @{
-			'include_rts' = @{ $true = 'true';$false = 'false' }[$IncludeRetweets -eq $true]
+			'include_rts'     = @{ $true = 'true'; $false = 'false' }[$IncludeRetweets -eq $true]
 			'exclude_replies' = @{ $true = 'false'; $false = 'true' }[$IncludeReplies -eq $true]
-			'count' = $MaximumTweets
-			'screen_name' = $Username
+			'count'           = $MaximumTweets
+			'screen_name'     = $Username
+			'tweet_mode'      = 'extended'
 		}
         
-        if ($FromId) {
-            $ApiParams.Add('max_id',($FromId -1)) # Per doc subtract 1 to avoid duplicating the last tweet
-        }
+		if ($FromId) {
+			$ApiParams.Add('max_id', ($FromId -1)) # Per doc subtract 1 to avoid duplicating the last tweet
+		}
         
-        if ($SinceId) {
-            $ApiParams.Add('since_id',$SinceId)
-        }
+		if ($SinceId) {
+			$ApiParams.Add('since_id', $SinceId)
+		}
 
 		$AuthorizationString = Get-OAuthAuthorization -Api 'Timeline' -ApiParameters $ApiParams -HttpEndPoint $HttpEndPoint -HttpVerb GET
 		
@@ -768,34 +743,21 @@ Function Get-TweetTimeline {
 	}
 }
 
-<#
-.Synopsis
-   Short description
-.DESCRIPTION
-   Long description
-.EXAMPLE
-   Example of how to use this cmdlet
-.EXAMPLE
-   Another example of how to use this cmdlet
-.LINK
-  https://bitly.com/a/settings/advanced
-#>
-function Set-BitlyAPI
-{
-    [CmdletBinding()]
-    Param
-    (
-        # BitLy Login
-        [Parameter(Mandatory=$true)]
-        [string]$Login,
+function Set-BitlyAPI {
+	[CmdletBinding()]
+	Param
+	(
+		# BitLy Login
+		[Parameter(Mandatory=$true)]
+		[string]$Login,
 
-        # Bitly API Key 
-        [Parameter(Mandatory=$true)]
-        [string]$BitlyAPIKey,
-        [switch]$Force
-    )
+		# Bitly API Key 
+		[Parameter(Mandatory=$true)]
+		[string]$BitlyAPIKey,
+		[switch]$Force
+	)
 
-    begin {
+	begin {
 		$RegKey = 'HKCU:\Software\MyTwitter\Bitly'
 	}
 	process {
@@ -818,32 +780,31 @@ function Set-BitlyAPI
 	}
 }
 
-<#
-.Synopsis
-   Set Bitly Generic Access Token
-.DESCRIPTION
-   Set Bitly Generic Access Token and store it in your registry
-   To set this up: 
-   1. You must create an account at Bit.ly, and obtain an Generic Authorization token. 
-   2. Verify your Bit.ly account with an eMail that Bitly sends to your account. 
-   3. Obtain an authorization token at: https://bitly.com/a/oauth_apps
-.EXAMPLE
-   Set-Set-BitlyAuthorizationToken -BitlyAutToken "3d9b120e66badcdfc8f63b752634e9061abf25ce"
-.LINK
-  https://bitly.com/a/oauth_apps
-#>
-function Set-BitlyAccessToken
-{
-    [CmdletBinding()]
-    Param
-    (
-        # Bitly API Key 
-        [Parameter(Mandatory=$true)]
-        [string]$BitlyAccessToken,
-        [switch]$Force
-    )
+function Set-BitlyAccessToken {
+	<#
+	.SYNOPSIS
+		Set Bitly Generic Access Token
+	.DESCRIPTION
+		Set Bitly Generic Access Token and store it in your registry
+		To set this up: 
+		1. You must create an account at Bit.ly, and obtain an Generic Authorization token. 
+		2. Verify your Bit.ly account with an eMail that Bitly sends to your account. 
+		3. Obtain an authorization token at: https://bitly.com/a/oauth_apps
+	.EXAMPLE
+		Set-Set-BitlyAuthorizationToken -BitlyAutToken "3d9b120e66badcdfc8f63b752634e9061abf25ce"
+	.LINK
+		https://bitly.com/a/oauth_apps
+	#>
+	[CmdletBinding()]
+	Param
+	(
+		# Bitly API Key 
+		[Parameter(Mandatory=$true)]
+		[string]$BitlyAccessToken,
+		[switch]$Force
+	)
 
-    begin {
+	begin {
 		$RegKey = 'HKCU:\Software\MyTwitter\Bitly'
 	}
 	process {
@@ -865,15 +826,3 @@ function Set-BitlyAccessToken
 		}
 	}
 }
-
-Export-ModuleMember -Function @( 'Get-OAuthAuthorization',
-    'New-MyTwitterConfiguration',
-    'Get-MyTwitterConfiguration',
-    'Remove-MyTwitterConfiguration',
-    'Send-Tweet',
-    'Send-TwitterDm',
-    'Split-Tweet',
-    'Get-ShortURL',
-    'Resize-Tweet',
-    'Get-TweetTimeline',
-    'Set-BitlyAccessToken')
