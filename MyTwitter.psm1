@@ -133,12 +133,14 @@ function Get-OAuthAuthorization {
 Function New-MyTwitterConfiguration {
 	<#
 	.SYNOPSIS
-		This Function stores the Twitter API Application settings in the registry.
+		This Function stores the Twitter API Application settings in a file 'MyTwitter.json' in the same directory.
 	.EXAMPLE
 		PS> New-MyTwitterConfiguration -APIKey akey -APISecret asecret -AccessToken sometoken -AccessTokenSecret atokensecret
 	
-		This example will create 4 registry values (APIKey,APISecret,AccessToken and AccessTokenSecret) in the
-		MyTwitter registry key with the observed values.
+		This example will store the 4 Values (APIKey,APISecret,AccessToken and AccessTokenSecret) in the
+		MyTwitter file.
+	.PARAMETER Force
+		Overwrites the existing Values in the 'MyTwitter.json' file.
 	#>
 	[CmdletBinding()]
 	param (
@@ -157,79 +159,54 @@ Function New-MyTwitterConfiguration {
 		[switch]$Force
 	)
 	begin {
-		$RegKey = 'HKCU:\Software\MyTwitter'
+		$JSONPath = '.\MyTwitter.json'
 	}
 	process {
 		#API key, the API secret, an Access token and an Access token secret are provided by Twitter application
-		Write-Verbose "Checking registry to see if the Twitter application keys are already stored"
-		if (!(Test-Path -Path $RegKey)) {
-			Write-Verbose "No MyTwitter configuration found in registry. Creating one."
-			New-Item -Path ($RegKey | Split-Path -Parent) -Name ($RegKey | Split-Path -Leaf) | Out-Null
+		Write-Verbose "Checking to see if the Twitter application keys are already stored in this directory"
+		if (!(Test-Path -Path $JSONPath)) {
+			Write-Verbose "No MyTwitter configuration file found. Creating one."
+		} else {
+			$JSONData = Get-Content $JSONPath | ConvertFrom-Json
 		}
 		
 		$Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
 		foreach ($Value in $Values) {
-			if ((Get-Item $RegKey).GetValue($Value) -and !$Force.IsPresent) {
-				Write-Verbose "'$RegKey\$Value' already exists. Skipping."
+			if (($JSONData.$Value) -and !$Force.IsPresent) {
+				Write-Verbose "'$Value' already exists. Skipping."
 			} else {
-				Write-Verbose "Creating $RegKey\$Value"
-				New-ItemProperty $RegKey -Name $Value -Value ((Get-Variable $Value).Value) -Force | Out-Null
+				Write-Verbose "Creating $Value"
+				$JSONData.$Value = ((Get-Variable $Value).Value)
 			}
 		}
+		$JSONData | ConvertTo-Json | Out-File $JSONPath
 	}
 }
 
 Function Get-MyTwitterConfiguration {
 	<#
 	.SYNOPSIS
-		This Function retrieves the Twitter API Application settings from the registry.
+		This Function retrieves the Twitter API Application settings from a file 'MyTwitter.json' in the same directory.
 	.EXAMPLE
-		PS> Get-Configuration
+		PS> Get-MyTwitterConfiguration
 	
 		This example will retrieve all (if any) MyTwitter configuration values
-		from the registry.
+		from a file 'MyTwitter.json' in the same directory.
 	#>
 	
 	[CmdletBinding()]
 	param ()
 	process {
-		$RegKey = 'HKCU:\Software\MyTwitter'
-		if (!(Test-Path -Path $RegKey)) {
-			Write-Verbose "No MyTwitter configuration found in registry"
+		$JSONPath = '.\MyTwitter.json'
+		if (!(Test-Path -Path $JSONPath)) {
+			Write-Verbose "No MyTwitter configuration ('MyTwitter.json') found in current directory"
 		} else {
 			$Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
-			$Output = @{ }
+			$Output = Get-Content $JSONPath | ConvertFrom-Json
 			foreach ($Value in $Values) {
-				if ((Get-Item $RegKey).GetValue($Value)) {
-					$Output.$Value = (Get-Item $RegKey).GetValue($Value)
-				} else {
-					$Output.$Value = ''
-				}
+				if (!($Output.$Value)) { Write-Verbose "No Value found for $Value"}
 			}
 			[pscustomobject]$Output
-		}
-	}
-}
-
-Function Remove-MyTwitterConfiguration {
-	<#
-	.SYNOPSIS
-		This function removes the Twitter API Application settings from the registry.
-	.EXAMPLE
-		PS> Remove-MyTwitterConfiguration
-	
-		This example will remove all (if any) MyTwitter configuration values
-		from the registry.
-	#>
-	
-	[CmdletBinding()]
-	param ()
-	process {
-		$RegKey = 'HKCU:\Software\MyTwitter'
-		if (!(Test-Path -Path $RegKey)) {
-			Write-Verbose "No MyTwitter configuration found in registry"
-		} else {
-			Remove-Item $RegKey -Force
 		}
 	}
 }
