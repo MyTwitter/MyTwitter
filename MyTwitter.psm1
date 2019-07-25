@@ -159,24 +159,27 @@ Function New-MyTwitterConfiguration {
 		[switch]$Force
 	)
 	begin {
-		$JSONPath = '.\MyTwitter.json'
+		$JSONPath = "$PSScriptRoot/MyTwitter.json"
 	}
 	process {
 		#API key, the API secret, an Access token and an Access token secret are provided by Twitter application
+		$Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
 		Write-Verbose "Checking to see if the Twitter application keys are already stored in this directory"
 		if (!(Test-Path -Path $JSONPath)) {
 			Write-Verbose "No MyTwitter configuration file found. Creating one."
+			$JSONData = @{}
+			foreach ($Value in $Values) {
+				$JSONData.Add($Value,((Get-Variable $Value).Value))
+			}
 		} else {
 			$JSONData = Get-Content $JSONPath | ConvertFrom-Json
-		}
-		
-		$Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
-		foreach ($Value in $Values) {
-			if (($JSONData.$Value) -and !$Force.IsPresent) {
-				Write-Verbose "'$Value' already exists. Skipping."
-			} else {
-				Write-Verbose "Creating $Value"
-				$JSONData.$Value = ((Get-Variable $Value).Value)
+			foreach ($Value in $Values) {
+				if (($JSONData.$Value) -and !$Force.IsPresent) {
+					Write-Verbose "'$Value' already exists. Skipping."
+				} else {
+					Write-Verbose "Creating $Value"
+					$JSONData.$Value = ((Get-Variable $Value).Value)
+				}
 			}
 		}
 		$JSONData | ConvertTo-Json | Out-File $JSONPath
@@ -197,7 +200,7 @@ Function Get-MyTwitterConfiguration {
 	[CmdletBinding()]
 	param ()
 	process {
-		$JSONPath = '.\MyTwitter.json'
+		$JSONPath = "$PSScriptRoot\MyTwitter.json"
 		if (!(Test-Path -Path $JSONPath)) {
 			Write-Verbose "No MyTwitter configuration ('MyTwitter.json') found in current directory"
 		} else {
