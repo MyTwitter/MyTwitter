@@ -1,12 +1,14 @@
 Function New-MyTwitterConfiguration {
     <#
 	.SYNOPSIS
-		This Function stores the Twitter API Application settings in the registry.
+		This Function stores the Twitter API Application settings in a file 'MyTwitter.json' in the same directory.
 	.EXAMPLE
 		PS> New-MyTwitterConfiguration -APIKey akey -APISecret asecret -AccessToken sometoken -AccessTokenSecret atokensecret
 	
-		This example will create 4 registry values (APIKey,APISecret,AccessToken and AccessTokenSecret) in the
-		MyTwitter registry key with the observed values.
+		This example will store the 4 Values (APIKey,APISecret,AccessToken and AccessTokenSecret) in the
+		MyTwitter file.
+	.PARAMETER Force
+		Overwrites the existing Values in the 'MyTwitter.json' file.
 	#>
     [CmdletBinding()]
     param (
@@ -25,24 +27,29 @@ Function New-MyTwitterConfiguration {
         [switch]$Force
     )
     begin {
-        $RegKey = 'HKCU:\Software\MyTwitter'
+        $JSONPath = "$PSScriptRoot/MyTwitter.json"
     }
     process {
         #API key, the API secret, an Access token and an Access token secret are provided by Twitter application
-        Write-Verbose "Checking registry to see if the Twitter application keys are already stored"
-        if (!(Test-Path -Path $RegKey)) {
-            Write-Verbose "No MyTwitter configuration found in registry. Creating one."
-            New-Item -Path ($RegKey | Split-Path -Parent) -Name ($RegKey | Split-Path -Leaf) | Out-Null
-        }
-		
         $Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
-        foreach ($Value in $Values) {
-            if ((Get-Item $RegKey).GetValue($Value) -and !$Force.IsPresent) {
-                Write-Verbose "'$RegKey\$Value' already exists. Skipping."
-            } else {
-                Write-Verbose "Creating $RegKey\$Value"
-                New-ItemProperty $RegKey -Name $Value -Value ((Get-Variable $Value).Value) -Force | Out-Null
+        Write-Verbose "Checking to see if the Twitter application keys are already stored in this directory"
+        if (!(Test-Path -Path $JSONPath)) {
+            Write-Verbose "No MyTwitter configuration file found. Creating one."
+            $JSONData = @{ }
+            foreach ($Value in $Values) {
+                $JSONData.Add($Value, ((Get-Variable $Value).Value))
+            }
+        } else {
+            $JSONData = Get-Content $JSONPath | ConvertFrom-Json
+            foreach ($Value in $Values) {
+                if (($JSONData.$Value) -and !$Force.IsPresent) {
+                    Write-Verbose "'$Value' already exists. Skipping."
+                } else {
+                    Write-Verbose "Creating $Value"
+                    $JSONData.$Value = ((Get-Variable $Value).Value)
+                }
             }
         }
+        $JSONData | ConvertTo-Json | Out-File $JSONPath
     }
 }

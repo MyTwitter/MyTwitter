@@ -1,29 +1,25 @@
 Function Get-MyTwitterConfiguration {
     <#
 	.SYNOPSIS
-		This Function retrieves the Twitter API Application settings from the registry.
+		This Function retrieves the Twitter API Application settings from a file 'MyTwitter.json' in the same directory.
 	.EXAMPLE
-		PS> Get-Configuration
+		PS> Get-MyTwitterConfiguration
 	
 		This example will retrieve all (if any) MyTwitter configuration values
-		from the registry.
+		from a file 'MyTwitter.json' in the same directory.
 	#>
 	
     [CmdletBinding()]
     param ()
     process {
-        $RegKey = 'HKCU:\Software\MyTwitter'
-        if (!(Test-Path -Path $RegKey)) {
-            Write-Verbose "No MyTwitter configuration found in registry"
+        $JSONPath = "$PSScriptRoot\MyTwitter.json"
+        if (!(Test-Path -Path $JSONPath)) {
+            Write-Verbose "No MyTwitter configuration ('MyTwitter.json') found in current directory"
         } else {
             $Values = 'APIKey', 'APISecret', 'AccessToken', 'AccessTokenSecret'
-            $Output = @{ }
+            $Output = Get-Content $JSONPath | ConvertFrom-Json
             foreach ($Value in $Values) {
-                if ((Get-Item $RegKey).GetValue($Value)) {
-                    $Output.$Value = (Get-Item $RegKey).GetValue($Value)
-                } else {
-                    $Output.$Value = ''
-                }
+                if (!($Output.$Value)) { Write-Verbose "No Value found for $Value" }
             }
             [pscustomobject]$Output
         }
