@@ -1,0 +1,10 @@
+environment:
+  nuget_apikey:
+    secure: Bvblx9A9AMTXl4LdQe4Aljoy1WBh48/U3UnlCSxDenF8X6tXEDLqzHdt3krnt7R6
+image: WMF 5
+install:
+  - ps: .\buildscripts\install.ps1
+build_script:
+  - ps: .\buildscripts\build.ps1
+after_test:
+  - ps: .\buildscripts\publish.ps1

@@ -4,7 +4,7 @@
 - - -
 The MyTwitter Powershell module is a module created to interact with Twitter.  It uses Twitter's OAuth API to tweet, send direct messages and hopefully more functionality is to come!
 
-For instructions on getting started with this module visit http://www.adamtheautomator.com/twitter-powershell/.
+For instructions on getting started with this module visit https://adamtheautomator.com/twitter-module-powershell/.
 
 09/30/14 - Added proper special character handling/escaping function and integrate.  
 
