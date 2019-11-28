@@ -22,10 +22,7 @@ function Send-TwitterDm {
         [string[]]$Username
     )
 	
-    process {
-	
-        $AuthorizationString = Get-OAuthAuthorization -ApiParameters  -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
-		
+    process {	
         ## Convert the message to a Byte array
         $Message = [System.Uri]::EscapeDataString($Message)
         foreach ($User in $Username) {

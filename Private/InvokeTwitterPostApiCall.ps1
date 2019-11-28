@@ -35,7 +35,7 @@ function InvokeTwitterPostApiCall {
         if ($PSBoundParameters.ContainsKey('Body')) {
             Write-Verbose "Using POST body '$Body'"
             $ivrParams.Body = $Body
-        } else {
+        } elseif ($PSBoundParameters.ContainsKey('Form')) {
             $ivrParams.Form = $Form
         }
         

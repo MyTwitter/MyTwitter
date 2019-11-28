@@ -49,7 +49,6 @@ Function Get-TweetTimeline {
         [uint64]$SinceId = $null
     )
     process {
-        $HttpEndPoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
         $ApiParams = @{
             'include_rts'     = @{ $true = 'true'; $false = 'false' }[$IncludeRetweets -eq $true]
             'exclude_replies' = @{ $true = 'false'; $false = 'true' }[$IncludeReplies -eq $true]
