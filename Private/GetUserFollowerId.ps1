@@ -4,14 +4,15 @@ function GetUserFollowerId {
     (
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$ScreenName
+        [string]$UserName
     )
 
     $ErrorActionPreference = 'Stop'
 
     $ApiParams = @{
-        'screen_name' = $ScreenName
+        'screen_name' = $UserName
     }
 
-    InvokeTwitterGetApiCall -HttpEndpoint 'https://api.twitter.com/1.1/followers/ids.json' -ApiParams $ApiParams
+    $response = InvokeTwitterGetApiCall -HttpEndpoint 'https://api.twitter.com/1.1/followers/ids.json' -ApiParams $ApiParams
+    $response.ids
 }
