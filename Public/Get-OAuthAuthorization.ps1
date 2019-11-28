@@ -83,7 +83,7 @@ function Get-OAuthAuthorization {
 			
             ## Create a string called $SignatureBase that joins all URL encoded 'Key=Value' elements with a &
             ## Remove the URL encoded & at the end and prepend the necessary 'POST&' verb to the front
-            $SignatureParams.GetEnumerator() | sort Name | foreach { $SignatureBase += [System.Uri]::EscapeDataString("$($_.Key)=$($_.Value)&") }
+            $SignatureParams.GetEnumerator() | Sort-Object -Property Name | foreach { $SignatureBase += [System.Uri]::EscapeDataString("$($_.Key)=$($_.Value)&") }
             $SignatureBase = $SignatureBase.TrimEnd('%26')
             $SignatureBase = "$HttpVerb&" + $SignatureBase
             Write-Verbose "Base signature generated '$SignatureBase'"
@@ -100,7 +100,7 @@ function Get-OAuthAuthorization {
             ## and only URL encoding the Values this time while including non-URL encoded double quotes around each value
             $AuthorizationParams.Add('oauth_signature', $OauthSignature)	
             $AuthorizationString = 'OAuth '
-            $AuthorizationParams.GetEnumerator() | sort name | foreach { $AuthorizationString += $_.Key + '="' + [System.Uri]::EscapeDataString($_.Value) + '", ' }
+            $AuthorizationParams.GetEnumerator() | Sort-Object -Property name | foreach { $AuthorizationString += $_.Key + '="' + [System.Uri]::EscapeDataString($_.Value) + '", ' }
             $AuthorizationString = $AuthorizationString.TrimEnd(', ')
             Write-Verbose "Using authorization string '$AuthorizationString'"
 			
