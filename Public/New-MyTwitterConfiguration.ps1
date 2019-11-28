@@ -39,6 +39,7 @@ Function New-MyTwitterConfiguration {
             foreach ($Value in $Values) {
                 $JSONData.Add($Value, ((Get-Variable $Value).Value))
             }
+            $null = New-Item -Path $JSONPath -ItemType 'File'
         } else {
             $JSONData = Get-Content $JSONPath | ConvertFrom-Json
             foreach ($Value in $Values) {
