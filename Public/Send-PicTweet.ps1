@@ -51,7 +51,7 @@ function Send-PicTweet {
 
         # Create OAuth for Upload
         $PICUploadEndPoint = 'https://upload.twitter.com/1.1/media/upload.json'
-        $AuthorizationString = Get-OAuthAuthorization -API 'Update' -ApiParameters @{ } -HttpEndPoint $PICUploadEndPoint -HttpVerb 'POST'
+        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{ } -HttpEndPoint $PICUploadEndPoint -HttpVerb 'POST'
 
         ######
         ### Using Chunked Media Upload, as suggested by Twitter.
@@ -87,7 +87,7 @@ function Send-PicTweet {
         $Message = $(Add-SpecialCharacters -Message $Message)
         $MediaID = $INITResponse.media_id
         $Body = "status=$Message&media_ids=$MediaID"
-        $AuthorizationString = Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status'=$message; 'media_ids'=$MediaID } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
+        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{'status'=$message; 'media_ids'=$MediaID } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
 
         Write-Verbose "Using POST body '$Body'"
         Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"

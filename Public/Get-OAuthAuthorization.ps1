@@ -4,7 +4,7 @@ function Get-OAuthAuthorization {
 		This function is used to create the signature and authorization headers needed to pass to OAuth
 		It has been tested with v1.1 of the API.
 	.EXAMPLE
-		Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status' = 'hello' } -HttpVerb GET -HttpEndPoint 'https://api.twitter.com/1.1/statuses/update.json'
+		Get-OAuthAuthorization -ApiParameters @{'status' = 'hello' } -HttpVerb GET -HttpEndPoint 'https://api.twitter.com/1.1/statuses/update.json'
 	
 		This example gets the authorization string needed in the HTTP GET method to send send a tweet 'hello'
 	.PARAMETER Api
@@ -21,9 +21,6 @@ function Get-OAuthAuthorization {
     [CmdletBinding(DefaultParameterSetName = 'None')]
     [OutputType('System.Management.Automation.PSCustomObject')]
     param (
-        [Parameter(Mandatory)]
-        [ValidateSet('Timeline', 'DirectMessage', 'Update')]
-        [string]$Api,
         [Parameter(Mandatory)]
         [string]$HttpEndPoint,
         [Parameter(Mandatory)]

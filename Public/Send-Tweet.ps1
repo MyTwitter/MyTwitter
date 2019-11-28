@@ -22,7 +22,7 @@ function Send-Tweet {
 		
         ####Added following line/function to properly escape !,*,(,) special characters
         $Message = $(Add-SpecialCharacters -Message $Message)
-        $AuthorizationString = Get-OAuthAuthorization -Api 'Update' -ApiParameters @{'status' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
+        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{'status' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
 		
         $Body = "status=$Message"
         Write-Verbose "Using POST body '$Body'"

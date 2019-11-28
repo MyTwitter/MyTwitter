@@ -25,7 +25,7 @@ function Send-TwitterDm {
     process {
         $HttpEndPoint = 'https://api.twitter.com/1.1/direct_messages/new.json'
 	
-        $AuthorizationString = Get-OAuthAuthorization -Api 'DirectMessage' -ApiParameters @{ 'screen_name' = $Username; 'text' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
+        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{ 'screen_name' = $Username; 'text' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
 		
         ## Convert the message to a Byte array
         $Message = [System.Uri]::EscapeDataString($Message)

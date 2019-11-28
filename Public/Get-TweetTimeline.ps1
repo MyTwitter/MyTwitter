@@ -66,7 +66,7 @@ Function Get-TweetTimeline {
             $ApiParams.Add('since_id', $SinceId)
         }
 
-        $AuthorizationString = Get-OAuthAuthorization -Api 'Timeline' -ApiParameters $ApiParams -HttpEndPoint $HttpEndPoint -HttpVerb GET
+        $AuthorizationString = Get-OAuthAuthorization -ApiParameters $ApiParams -HttpEndPoint $HttpEndPoint -HttpVerb GET
 		
         $HttpRequestUrl = "https://api.twitter.com/1.1/statuses/user_timeline.json?"
         $ApiParams.GetEnumerator() | Sort-Object -Property name | foreach { $HttpRequestUrl += "{0}={1}&" -f $_.Key, $_.Value }
