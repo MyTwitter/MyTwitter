@@ -66,6 +66,6 @@ Function Get-TweetTimeline {
             $ApiParams.Add('since_id', $SinceId)
         }
 
-        InvokeTwitterApiCall -HttpEndpoint 'https://api.twitter.com/1.1/statuses/user_timeline.json' -ApiParams $ApiParams -HttpVerb 'GET'
+        InvokeTwitterGetApiCall -HttpEndpoint 'https://api.twitter.com/1.1/statuses/user_timeline.json' -ApiParams $ApiParams
     }
 }

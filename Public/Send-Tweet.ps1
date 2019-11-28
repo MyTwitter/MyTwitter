@@ -17,15 +17,12 @@ function Send-Tweet {
         [string]$Message
     )
 	
-    process {
-        $HttpEndPoint = 'https://api.twitter.com/1.1/statuses/update.json'
-		
+    process {		
         ####Added following line/function to properly escape !,*,(,) special characters
         $Message = $(Add-SpecialCharacters -Message $Message)
-        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{'status' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
-		
         $Body = "status=$Message"
-        Write-Verbose "Using POST body '$Body'"
-        Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
+
+        $apiParams = @{'status' = $Message }
+        InvokeTwitterPostApiCall -HttpEndpoint 'https://api.twitter.com/1.1/statuses/update.json' -ApiParams $apiParams -Body $Body
     }
 }
