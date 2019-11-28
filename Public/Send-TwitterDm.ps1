@@ -23,17 +23,20 @@ function Send-TwitterDm {
     )
 	
     process {
-        $HttpEndPoint = 'https://api.twitter.com/1.1/direct_messages/new.json'
 	
-        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{ 'screen_name' = $Username; 'text' = $Message } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
+        $AuthorizationString = Get-OAuthAuthorization -ApiParameters  -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
 		
         ## Convert the message to a Byte array
         $Message = [System.Uri]::EscapeDataString($Message)
         foreach ($User in $Username) {
             $User = [System.Uri]::EscapeDataString($User)
             $Body = [System.Text.Encoding]::ASCII.GetBytes("text=$Message&screen_name=$User");
-            Write-Verbose "Using POST body '$Body'"
-            Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
+
+            $apiParams = @{
+                'screen_name' = $Username
+                'text'        = $Message
+            }
+            InvokeTwitterPostApiCall -HttpEndpoint 'https://api.twitter.com/1.1/direct_messages/new.json' -ApiParams $apiParams -Body $Body
         }
 		
     }

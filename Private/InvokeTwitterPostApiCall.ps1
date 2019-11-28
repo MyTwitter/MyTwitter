@@ -10,9 +10,13 @@ function InvokeTwitterPostApiCall {
         [ValidateNotNullOrEmpty()]
         [hashtable]$ApiParams,
 
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
-        [string]$Body
+        [string]$Body,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$Form
     )
 
     begin {
@@ -21,8 +25,20 @@ function InvokeTwitterPostApiCall {
 
     process {
         $AuthorizationString = Get-OAuthAuthorization -ApiParameters $ApiParams -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
-		
-        Write-Verbose "Using POST body '$Body'"
-        Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType 'application/x-www-form-urlencoded'        
+
+        $ivrParams = @{
+            'Uri'         = $HttpEndPoint
+            'Method'      = 'Post'
+            'Headers'     = @{ 'Authorization' = $AuthorizationString }
+            'ContentType' = 'application/x-www-form-urlencoded'        
+        }
+        if ($PSBoundParameters.ContainsKey('Body')) {
+            Write-Verbose "Using POST body '$Body'"
+            $ivrParams.Body = $Body
+        } else {
+            $ivrParams.Form = $Form
+        }
+        
+        Invoke-RestMethod @ivrParams
     }
 }

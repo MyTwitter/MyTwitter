@@ -49,10 +49,6 @@ function Send-PicTweet {
         } while ($bytesread -eq $bufferSize)
         $reader.Dispose()
 
-        # Create OAuth for Upload
-        $PICUploadEndPoint = 'https://upload.twitter.com/1.1/media/upload.json'
-        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{ } -HttpEndPoint $PICUploadEndPoint -HttpVerb 'POST'
-
         ######
         ### Using Chunked Media Upload, as suggested by Twitter.
         ### See TwitterAPI Refernce for...well...Reference: https://developer.twitter.com/en/docs/media/upload-media/uploading-media/chunked-media-upload
@@ -61,7 +57,7 @@ function Send-PicTweet {
         ## INIT Chunked Upload
         try {
             $INITBody = @{ command="INIT"; total_bytes=$TotalBytes; media_type="image/jpeg" }
-            $INITResponse = Invoke-RestMethod -URI $PICUploadEndPoint -Method Post -Form $INITBody -Headers @{ 'Authorization' = $AuthorizationString } -ErrorAction Stop
+            InvokeTwitterPostApiCall -HttpEndpoint 'https://upload.twitter.com/1.1/media/upload.json' -ApiParams @{ } -Form $INITBody
         } catch { throw 'Error during Upload INIT' }
 
         ## APPEND Body
@@ -69,7 +65,7 @@ function Send-PicTweet {
             $x = 0
             foreach ($chunk in $img) {
                 $AppendBody = @{ command="APPEND"; media_id=$INITResponse.media_id; media_data=$img[$x]; segment_index=$x }
-                $null = Invoke-RestMethod -URI $PICUploadEndPoint -Method Post -Form $AppendBody -Headers @{ 'Authorization' = $AuthorizationString } -ErrorAction Stop
+                InvokeTwitterPostApiCall -HttpEndpoint 'https://upload.twitter.com/1.1/media/upload.json' -ApiParams @{ } -Form $AppendBody
                 $x++
             }
         } catch { throw 'Error during Upload APPEND' }
@@ -77,19 +73,17 @@ function Send-PicTweet {
         ### FINALIZE Body
         try {
             $FINALIZEBody = @{ command="FINALIZE"; media_id=$INITResponse.media_id }
-            $null = Invoke-RestMethod -URI $PICUploadEndPoint -Method Post -Form $FINALIZEBody -Headers @{ 'Authorization' = $AuthorizationString } -ErrorAction Stop
+            InvokeTwitterPostApiCall -HttpEndpoint 'https://upload.twitter.com/1.1/media/upload.json' -ApiParams @{ } -Form $FINALIZEBody
         } catch { throw 'Error during Upload FINALIZE' }
-
-        ### from here it is similar to function send-tweet
-        $HttpEndPoint = 'https://api.twitter.com/1.1/statuses/update.json'
 
         ####Added following line/function to properly escape !,*,(,) special characters
         $Message = $(Add-SpecialCharacters -Message $Message)
         $MediaID = $INITResponse.media_id
         $Body = "status=$Message&media_ids=$MediaID"
-        $AuthorizationString = Get-OAuthAuthorization -ApiParameters @{'status'=$message; 'media_ids'=$MediaID } -HttpEndPoint $HttpEndPoint -HttpVerb 'POST'
-
-        Write-Verbose "Using POST body '$Body'"
-        Invoke-RestMethod -URI $HttpEndPoint -Method Post -Body $Body -Headers @{ 'Authorization' = $AuthorizationString } -ContentType "application/x-www-form-urlencoded"
+        $apiParams =  @{
+            'status'    =$message
+            'media_ids' =$MediaID
+        }
+        InvokeTwitterPostApiCall -HttpEndpoint 'https://api.twitter.com/1.1/statuses/update.json' -ApiParams $apiParams -Body $Body
     }
 }
