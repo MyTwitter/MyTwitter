@@ -1,6 +1,6 @@
 environment:
   nuget_apikey:
-    secure: Bvblx9A9AMTXl4LdQe4Aljoy1WBh48/U3UnlCSxDenF8X6tXEDLqzHdt3krnt7R6
+    secure: GuIAUD0WaG8yqjfDRvds1Yl4znPS7TAuScD/dQ1SwbSGYsCnUk8tLjVUhP0YOr3G
 image: WMF 5
 install:
   - ps: .\buildscripts\install.ps1
