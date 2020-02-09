@@ -18,7 +18,11 @@ For instructions on getting started with this module visit https://adamtheautoma
 03/14/15 - Fixed Bitly Authentication within the Get-ShortUrl function.
 
 # Install
-To install the module including all source code you can just run in a PowerShell v3 or higher the following command:
+You can install this module directly from the PowerShell Gallery using:
+<pre>
+Install-Module MyTwitter
+</pre>
+To install the module including all source code you can also just run in a PowerShell v3 or higher the following command:
 <pre>
 iex (New-Object Net.WebClient).DownloadString("https://gist.githubusercontent.com/stefanstranger/2138dc710576bc40b64b/raw/bfd25a0e7363e9a1906908b0695ebcffaa508276/InstallMyTwitterModule.ps1")
 </pre>
