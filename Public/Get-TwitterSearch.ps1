@@ -30,7 +30,7 @@ function Get-TwitterSearch {
     if ($count -gt  $apiLimit){$count = $apiLimit} #whoah boi
     $resultsperPage = 100 #max results per page AFAIK
     $ApiParams = @{
-        'q' = $searchString;
+        'q' = [System.Web.HTTPUtility]::UrlEncode($searchString);
         'count' = $resultsperPage;
     }
     #go through the params and see if they've been set
@@ -45,7 +45,7 @@ function Get-TwitterSearch {
         'max_id',
         'include_entities') |ForEach-Object{
         if ($PSBoundParameters.ContainsKey($_)){
-            $ApiParams[$_] = $PSBoundParameters[$_]
+            $ApiParams[$_] = [System.Web.HTTPUtility]::UrlEncode($PSBoundParameters[$_])
         }
         if ($PSBoundParameters.ContainsKey('until')){
             $ApiParams['until']  = (Get-Date -date $until -Format 'yyyy-MM-dd') #format dates for the API
@@ -55,6 +55,7 @@ function Get-TwitterSearch {
     $responses = @()
 
     for ($i = 0; $i -lt $count; $i += $resultsPerPage){
+        write-verbose ("`n`ngetting results {0} - {1} of {2}`n" -f $i, ($count, $resultsperPage|measure-object -Minimum).Minimum, $count)
         $response = InvokeTwitterGetApiCall -HttpEndpoint 'https://api.twitter.com/1.1/search/tweets.json' -ApiParams $ApiParams
         if ($response.statuses.length -gt 0){
             $lastTweet = $response.statuses[($response.statuses.length - 1 )].id_str
