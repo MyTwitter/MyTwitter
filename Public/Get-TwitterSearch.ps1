@@ -55,7 +55,8 @@ function Get-TwitterSearch {
     $responses = @()
 
     for ($i = 0; $i -lt $count; $i += $resultsPerPage){
-        $response = InvokeTwitterGetApiCall -HttpEndpoint 'https://api.twitter.com/1.1/search/tweets.json' -ApiParams $ApiParams             $lastTweet = $response.statuses[($response.statuses.length - 1 )].id_str
+        $response = InvokeTwitterGetApiCall -HttpEndpoint 'https://api.twitter.com/1.1/search/tweets.json' -ApiParams $ApiParams
+            $lastTweet = $response.statuses[($response.statuses.length - 1 )].id_str
             $ApiParams.max_id = $lastTweet
         }
         $responses += $response
