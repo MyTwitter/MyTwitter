@@ -3,7 +3,6 @@ function Add-SpecialCharacters {
     [OutputType([System.String])]
     param (
         [Parameter(Mandatory)]
-        [ValidateLength(1, 140)]
         [string] $Message
     )
     try {
