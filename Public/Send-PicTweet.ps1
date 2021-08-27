@@ -24,7 +24,7 @@ function Send-PicTweet {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [ValidateLength(1, 140)]
+        [ValidateLength(1, 280)]
         [string]$Message,
 
         [Parameter(Mandatory)]
